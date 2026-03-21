@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<linker>
+        <assembly fullname="Nox.Microphone" preserve="all" />
+        <assembly fullname="Nox.Microphone.Runtime" preserve="all" />
+</linker>

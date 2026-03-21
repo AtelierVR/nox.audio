@@ -1,0 +1,62 @@
+{
+  "type": "mod",
+  "id": "nox.microphone",
+  "provides": [
+    "fr.hactazia.microphone",
+    "microphone"
+  ],
+  "name": "Microphone",
+  "version": "1.0.0",
+  "description": "Provides the Microphone action to use the game.",
+  "license": "GPL-3.0",
+  "icon": null,
+  "contact": {
+    "email": "hactazia@gmail.com",
+    "source": "https://github.com/AtelierVR/nox.microphone",
+    "website": "https://nox.hactazia.fr/",
+    "issues": "https://github.com/AtelierVR/nox.microphone/issues"
+  },
+  "authors": [
+    {
+      "name": "Hactazia",
+      "email": "hactazia@gmail.com",
+      "website": "https://hactazia.fr/"
+    }
+  ],
+  "contributors": [],
+  "relations": [
+    {
+      "id": "settings",
+      "type": "depends",
+      "version": ">=1.0.0"
+    },
+    {
+      "id": "ui",
+      "type": "depends",
+      "version": ">=1.0.0"
+    }
+  ],
+  "constraints": [
+    {
+      "type": "after",
+      "id": "settings"
+    },
+    {
+      "type": "after",
+      "id": "ui"
+    }
+  ],
+  "entrypoints": {
+    "main": [
+      "Nox.Microphone.Runtime.Main"
+    ],
+    "editor": [
+      "Nox.Microphone.Runtime.Editor"
+    ],
+    "client": [
+      "Nox.Microphone.Runtime.Client"
+    ]
+  },
+  "references": [],
+  "permissions": []
+}

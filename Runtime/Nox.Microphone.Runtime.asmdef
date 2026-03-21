@@ -1,0 +1,21 @@
+{
+    "name": "Nox.Microphone.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "Nox.CCK",
+        "UniTask",
+        "Nox.Microphone",
+        "Nox.Settings",
+        "Nox.CCK.Settings",
+        "Nox.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

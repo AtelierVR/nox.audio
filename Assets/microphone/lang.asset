@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 776389e82c640c44086d3baf10dd1c7b, type: 3}
+  m_Name: lang
+  m_EditorClassIdentifier: Nox.CCK::Nox.CCK.Language.LanguagePack
+  languages:
+  - IETF: en-US
+    entries:
+    - key: audio.microphone.default
+      value: "{0} (Default)"
+    - key: settings.page.audio.label
+      value: "Audio"
+    - key: settings.page.audio.title
+      value: "Audio Settings"
+    - key: settings.group.audio.microphone.label
+      value: "Microphone"
+    - key: settings.entry.audio.microphone.current.label
+      value: "Current"
+    - key: settings.entry.audio.microphone.volume.label
+      value: "Volume"
+    - key: settings.entry.audio.microphone.activation.label
+      value: "Activation Threshold"
+  - IETF: fr-FR
+    entries:
+    - key: audio.microphone.default
+      value: "{0} (Par Défaut)"
+    - key: settings.page.audio.label
+      value: "Audio"
+    - key: settings.page.audio.title
+      value: "Paramètres Audio"
+    - key: settings.group.audio.microphone.label
+      value: "Microphone"
+    - key: settings.entry.audio.microphone.current.label
+      value: "Actuel"
+    - key: settings.entry.audio.microphone.volume.label
+      value: "Volume"
+    - key: settings.entry.audio.microphone.activation.label
+      value: "Seuil d'activation"
