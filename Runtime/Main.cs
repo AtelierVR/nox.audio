@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using api.nox.microphone.settings;
+using Nox.Microphone.Runtime;
 using Nox.CCK.Language;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
