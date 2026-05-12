@@ -1,0 +1,12 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Packages/nox.cck/Resources/nox.style.uss?fileID=7433441132597879392&amp;guid=956d93e835714844b98277f4fdbd77d3&amp;type=3#nox.style" />
+    <ui:VisualElement style="flex-grow: 1;">
+        <ui:ScrollView name="list" style="flex-grow: 1;" />
+        <ui:VisualElement name="empty" class="hidden" style="flex-grow: 1; justify-content: center;">
+            <ui:GroupBox class="p-8 m-0">
+                <ui:Label text="No Microphones Detected" class="text-lg text-center mb-8" />
+                <ui:Label text="No microphones are currently available." class="text-center" style="opacity: 0.7;" />
+            </ui:GroupBox>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

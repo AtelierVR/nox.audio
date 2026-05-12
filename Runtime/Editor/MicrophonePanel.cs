@@ -1,269 +1,228 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using Nox.CCK.Mods.Panels;
+using Nox.CCK.Mods.Cores;
+using Nox.CCK.Mods.Initializers;
+using Nox.Editor.Panel;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 
 namespace Nox.Microphone.Runtime {
-	public class MicrophonePanel : IEditorPanelBuilder, IDisposable {
-		public string GetId()
-			=> "microphone";
+	public class MicrophonePanel : IEditorModInitializer, Nox.Editor.Panel.IPanel {
+		internal IEditorModCoreAPI        API;
+		internal MicrophonePanelInstance  Instance;
 
-		public string GetName()
-			=> "Audio/Microphone";
+		public void OnInitializeEditor(IEditorModCoreAPI api) => API = api;
+		public void OnDisposeEditor() { Instance?.OnDestroy(); API = null; }
 
-		public bool IsHidden()
-			=> false;
+		public string[] GetPath()  => new[] { "audio", "microphone" };
+		public string   GetLabel() => "Audio/Microphone";
 
-		private readonly VisualElement     _root = new();
+		public IInstance[] GetInstances()
+			=> Instance != null ? new IInstance[] { Instance } : Array.Empty<IInstance>();
+
+		public IInstance Instantiate(IWindow window, Dictionary<string, object> data)
+			=> Instance = new MicrophonePanelInstance(this, window);
+	}
+
+	public class MicrophonePanelInstance : IInstance {
+		private readonly MicrophonePanel   _panel;
+		private readonly IWindow           _window;
+		private          VisualElement     _root;
 		private          MicrophoneManager _microphoneManager;
-		private          ScrollView        _microphoneList;
-		private          Label             _noMicrophonesLabel;
+		private          ScrollView        _list;
+		private          VisualElement     _empty;
 		private          float             _lastUpdateTime;
-		private const    float             UpdateInterval = 0.1f; // Mise à jour toutes les 100ms
+		private const    float             UpdateInterval = 0.1f;
 
-		public VisualElement Make(Dictionary<string, object> data) {
-			_root.Clear();
-			var root = new VisualElement();
+		public MicrophonePanelInstance(MicrophonePanel panel, IWindow window) {
+			_panel  = panel;
+			_window = window;
+		}
 
-			// Style du panneau principal
-			root.style.paddingTop = root.style.paddingBottom =
-				root.style.paddingLeft = root.style.paddingRight = 10;
-			root.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.2f, 1f));
+		public Nox.Editor.Panel.IPanel GetPanel()  => _panel;
+		public IWindow                 GetWindow() => _window;
+		public string                  GetTitle()  => "Microphone";
 
-			// Titre du panneau
-			var title = new Label("Liste des Microphones");
-			title.style.fontSize                = 16;
-			title.style.unityFontStyleAndWeight = FontStyle.Bold;
-			title.style.marginBottom            = 10;
-			title.style.color                   = Color.white;
-			root.Add(title);
+		public IToolOption[] GetOptions() => new IToolOption[] {
+			new DefaultToolOption("Refresh", RefreshMicrophones)
+		};
 
-			// Bouton de rafraîchissement
-			var refreshButton = new Button(RefreshMicrophones) { text = "Rafraîchir" };
-			refreshButton.style.marginBottom = 10;
-			root.Add(refreshButton);
+		public void OnDestroy() {
+			EditorApplication.update -= UpdateMicrophoneInfo;
+			_panel.Instance = null;
+		}
 
-			// Zone de défilement pour la liste des microphones
-			_microphoneList                 = new ScrollView();
-			_microphoneList.style.flexGrow  = 1;
-			_microphoneList.style.maxHeight = 400;
-			root.Add(_microphoneList);
+		public VisualElement GetContent() {
+			if (_root != null) return _root;
+			_root = _panel.API.AssetAPI.GetAsset<VisualTreeAsset>("microphone-panel.uxml").CloneTree();
+			_root.AddToClassList("flex-fill");
 
-			// Label pour "aucun microphone"
-			_noMicrophonesLabel               = new Label("Aucun microphone détecté");
-			_noMicrophonesLabel.style.color   = Color.gray;
-			_noMicrophonesLabel.style.display = DisplayStyle.None;
-			root.Add(_noMicrophonesLabel);
+			_list  = _root.Q<ScrollView>("list");
+			_empty = _root.Q<VisualElement>("empty");
 
-			// Initialisation
-			InitializeMicrophoneManager();
+			if (Main.Instance != null)
+				_microphoneManager = Main.Instance.Manager;
+
 			RefreshMicrophones();
-
-			// Mise à jour périodique
 			EditorApplication.update += UpdateMicrophoneInfo;
-
-			_root.Add(root);
 			return _root;
 		}
 
-		private void InitializeMicrophoneManager() {
-			try {
-				// Récupérer le MicrophoneManager depuis l'instance principale
-				if (Main.Instance != null) {
-					_microphoneManager = Main.Instance.Manager;
-				}
-			} catch (Exception ex) {
-				Debug.LogError($"Erreur lors de l'initialisation du MicrophoneManager: {ex.Message}");
-			}
-		}
-
 		private void RefreshMicrophones() {
-			_microphoneList.Clear();
+			_list.Clear();
 
-			if (_microphoneManager == null || _microphoneManager.Microphones.Count == 0) {
-				_noMicrophonesLabel.style.display = DisplayStyle.Flex;
-				return;
-			}
+			var hasMics = _microphoneManager != null && _microphoneManager.Microphones.Count > 0;
+			_empty?.EnableInClassList("hidden", hasMics);
+			_list?.EnableInClassList("hidden", !hasMics);
 
-			_noMicrophonesLabel.style.display = DisplayStyle.None;
+			if (!hasMics) return;
 
-			foreach (var microphone in _microphoneManager.Microphones) {
-				CreateMicrophoneItem(microphone);
-			}
+			foreach (var mic in _microphoneManager.Microphones)
+				_list.Add(CreateMicrophoneItem(mic));
 		}
 
-		private void CreateMicrophoneItem(Microphone microphone) {
-			var container = new VisualElement();
-			container.style.backgroundColor = new StyleColor(new Color(0.3f, 0.3f, 0.3f, 1f));
-			container.style.borderTopWidth = container.style.borderBottomWidth =
-				container.style.borderLeftWidth = container.style.borderRightWidth = 1;
-			container.style.borderTopColor = container.style.borderBottomColor =
-				container.style.borderLeftColor = container.style.borderRightColor = Color.gray;
-			container.style.paddingTop = container.style.paddingBottom =
-				container.style.paddingLeft = container.style.paddingRight = 10;
-			container.style.marginBottom = 5;
+		private VisualElement CreateMicrophoneItem(Microphone microphone) {
+			var container = new GroupBox();
+			container.AddToClassList("p-8");
+			container.AddToClassList("m-0");
+			container.AddToClassList("border-b");
 
-			// Ligne 1: Nom et statut par défaut
-			var headerRow = new VisualElement();
-			headerRow.style.flexDirection  = FlexDirection.Row;
-			headerRow.style.justifyContent = Justify.SpaceBetween;
-			headerRow.style.alignItems     = Align.Center;
+			// Header row: name + badges
+			var header = new VisualElement();
+			header.AddToClassList("flex-row");
+			header.AddToClassList("align-center");
+			header.AddToClassList("mb-4");
 
 			var nameLabel = new Label(microphone.GetName());
-			nameLabel.style.fontSize                = 14;
-			nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-			nameLabel.style.color                   = microphone.IsDefault() ? Color.yellow : Color.white;
+			nameLabel.AddToClassList("text-sm");
+			nameLabel.AddToClassList("flex-grow");
+			nameLabel.EnableInClassList("text-bold", microphone.IsDefault());
 
-			var statusContainer = new VisualElement();
-			statusContainer.style.flexDirection = FlexDirection.Row;
+			header.Add(nameLabel);
 
 			if (microphone.IsDefault()) {
-				var defaultBadge = new Label("DÉFAUT");
-				defaultBadge.style.backgroundColor = Color.yellow;
-				defaultBadge.style.color           = Color.black;
-				defaultBadge.style.paddingTop = defaultBadge.style.paddingBottom =
-					defaultBadge.style.paddingLeft = defaultBadge.style.paddingRight = 2;
-				defaultBadge.style.fontSize    = 10;
-				defaultBadge.style.marginRight = 5;
-				statusContainer.Add(defaultBadge);
+				var badge = new Label("DEFAULT");
+				badge.AddToClassList("badge");
+				badge.AddToClassList("badge-warning");
+				header.Add(badge);
 			}
 
 			if (_microphoneManager.CurrentMicrophone == microphone) {
-				var currentBadge = new Label("ACTUEL");
-				currentBadge.style.backgroundColor = Color.green;
-				currentBadge.style.color           = Color.white;
-				currentBadge.style.paddingTop = currentBadge.style.paddingBottom =
-					currentBadge.style.paddingLeft = currentBadge.style.paddingRight = 2;
-				currentBadge.style.fontSize = 10;
-				statusContainer.Add(currentBadge);
+				var badge = new Label("ACTIVE");
+				badge.AddToClassList("badge");
+				badge.AddToClassList("badge-success");
+				header.Add(badge);
 			}
 
-			headerRow.Add(nameLabel);
-			headerRow.Add(statusContainer);
-			container.Add(headerRow);
+			container.Add(header);
 
-			// Ligne 2: Statut d'enregistrement et volume
-			var infoRow = new VisualElement();
-			infoRow.style.flexDirection  = FlexDirection.Row;
-			infoRow.style.justifyContent = Justify.SpaceBetween;
-			infoRow.style.marginTop      = 5;
+			// Recording status row
+			var recordingRow = new VisualElement();
+			recordingRow.AddToClassList("flex-row");
+			recordingRow.AddToClassList("align-center");
+			recordingRow.AddToClassList("mb-4");
 
-			var recordingStatus = new Label();
-			recordingStatus.name = $"recording-{microphone.GetIndex()}";
-			UpdateRecordingStatus(recordingStatus, microphone);
+			var recLabel = new Label("Status");
+			recLabel.AddToClassList("key-label");
+			recLabel.AddToClassList("opacity-75");
 
-			var loudnessContainer = new VisualElement();
-			loudnessContainer.style.flexDirection = FlexDirection.Row;
-			loudnessContainer.style.alignItems    = Align.Center;
+			var recStatus = new Label();
+			recStatus.name = $"recording-{microphone.GetIndex()}";
+			recStatus.AddToClassList("flex-grow");
+			UpdateRecordingStatus(recStatus, microphone);
 
-			var loudnessLabel = new Label("Volume:");
-			loudnessLabel.style.marginRight = 5;
-			loudnessLabel.style.color       = Color.white;
+			recordingRow.Add(recLabel);
+			recordingRow.Add(recStatus);
+			container.Add(recordingRow);
+
+			// Volume row
+			var volRow = new VisualElement();
+			volRow.AddToClassList("flex-row");
+			volRow.AddToClassList("align-center");
+			volRow.AddToClassList("mb-4");
+
+			var volLabel = new Label("Volume");
+			volLabel.AddToClassList("key-label");
+			volLabel.AddToClassList("opacity-75");
 
 			var loudnessBar = new ProgressBar();
-			loudnessBar.name         = $"loudness-{microphone.GetIndex()}";
-			loudnessBar.style.width  = 100;
-			loudnessBar.style.height = 15;
+			loudnessBar.name = $"loudness-{microphone.GetIndex()}";
+			loudnessBar.AddToClassList("flex-grow");
 			UpdateLoudnessBar(loudnessBar, microphone);
 
-			loudnessContainer.Add(loudnessLabel);
-			loudnessContainer.Add(loudnessBar);
+			volRow.Add(volLabel);
+			volRow.Add(loudnessBar);
+			container.Add(volRow);
 
-			infoRow.Add(recordingStatus);
-			infoRow.Add(loudnessContainer);
-			container.Add(infoRow);
-
-			// Ligne 3: Utilisé par
+			// Used-by row
 			var usedByRow = new VisualElement();
-			usedByRow.style.marginTop = 5;
+			usedByRow.AddToClassList("flex-row");
+			usedByRow.AddToClassList("align-center");
+
+			var usedByKeyLabel = new Label("Used by");
+			usedByKeyLabel.AddToClassList("key-label");
+			usedByKeyLabel.AddToClassList("opacity-75");
 
 			var usedByLabel = new Label();
 			usedByLabel.name = $"usedby-{microphone.GetIndex()}";
+			usedByLabel.AddToClassList("flex-grow");
 			UpdateUsedByLabel(usedByLabel, microphone);
 
+			usedByRow.Add(usedByKeyLabel);
 			usedByRow.Add(usedByLabel);
 			container.Add(usedByRow);
 
-			// Ligne 4: Informations techniques
-			var techInfoRow = new VisualElement();
-			techInfoRow.style.marginTop = 5;
-			techInfoRow.style.fontSize  = 11;
-			techInfoRow.style.color     = Color.gray;
+			// Technical info
+			var freqs = microphone.GetFrequencies();
+			var techRow = new VisualElement();
+			techRow.AddToClassList("mt-4");
+			var techLabel = new Label($"Index: {microphone.GetIndex()} | {freqs.x}Hz – {freqs.y}Hz");
+			techLabel.AddToClassList("text-xs");
+			techLabel.AddToClassList("opacity-50");
+			techRow.Add(techLabel);
+			container.Add(techRow);
 
-			var frequencies = microphone.GetFrequencies();
-			var techInfo    = new Label($"Index: {microphone.GetIndex()} | Fréquences: {frequencies.x}Hz - {frequencies.y}Hz");
-			techInfoRow.Add(techInfo);
-			container.Add(techInfoRow);
-
-			_microphoneList.Add(container);
+			return container;
 		}
 
 		private void UpdateMicrophoneInfo() {
 			if (Time.realtimeSinceStartup - _lastUpdateTime < UpdateInterval) return;
 			_lastUpdateTime = Time.realtimeSinceStartup;
+			if (_microphoneManager == null || _list == null) return;
 
-			if (_microphoneManager == null) return;
-
-			foreach (var microphone in _microphoneManager.Microphones) {
-				var recordingStatusElement = _microphoneList.Q<Label>($"recording-{microphone.GetIndex()}");
-				if (recordingStatusElement != null) {
-					UpdateRecordingStatus(recordingStatusElement, microphone);
-				}
-
-				var loudnessBarElement = _microphoneList.Q<ProgressBar>($"loudness-{microphone.GetIndex()}");
-				if (loudnessBarElement != null) {
-					UpdateLoudnessBar(loudnessBarElement, microphone);
-				}
-
-				var usedByElement = _microphoneList.Q<Label>($"usedby-{microphone.GetIndex()}");
-				if (usedByElement != null) {
-					UpdateUsedByLabel(usedByElement, microphone);
-				}
+			foreach (var mic in _microphoneManager.Microphones) {
+				var recEl  = _list.Q<Label>($"recording-{mic.GetIndex()}");
+				var louEl  = _list.Q<ProgressBar>($"loudness-{mic.GetIndex()}");
+				var useEl  = _list.Q<Label>($"usedby-{mic.GetIndex()}");
+				if (recEl != null)  UpdateRecordingStatus(recEl, mic);
+				if (louEl != null)  UpdateLoudnessBar(louEl, mic);
+				if (useEl != null)  UpdateUsedByLabel(useEl, mic);
 			}
 		}
 
-		private void UpdateRecordingStatus(Label label, Microphone microphone) {
-			if (microphone.IsRecording()) {
-				label.text        = "🔴 ENREGISTREMENT";
-				label.style.color = Color.red;
-			} else {
-				label.text        = "⚫ ARRÊTÉ";
-				label.style.color = Color.gray;
-			}
+		private static void UpdateRecordingStatus(Label label, Microphone mic) {
+			var isRecording = mic.IsRecording();
+			label.text = isRecording ? "Recording" : "Idle";
+			label.EnableInClassList("text-danger", isRecording);
 		}
 
-		private void UpdateLoudnessBar(ProgressBar bar, Microphone microphone) {
-			var loudness = microphone.GetLoudness();
-			bar.value = loudness * 100f;
-			bar.title = $"{loudness:P0}";
-
-			// Couleur de la barre basée sur le niveau
-			if (loudness > 0.7f) {
-				bar.style.backgroundColor = Color.red;
-			} else if (loudness > 0.4f) {
-				bar.style.backgroundColor = Color.yellow;
-			} else {
-				bar.style.backgroundColor = Color.green;
-			}
+		private static void UpdateLoudnessBar(ProgressBar bar, Microphone mic) {
+			var v    = mic.GetLoudness();
+			bar.value = v * 100f;
+			bar.title = $"{v:P0}";
 		}
 
-		private void UpdateUsedByLabel(Label label, Microphone microphone) {
-			var usedBy = microphone.UsedBy();
+		private static void UpdateUsedByLabel(Label label, Microphone mic) {
+			var usedBy = mic.UsedBy();
 			if (usedBy == null || usedBy.Length == 0) {
-				label.text        = "Utilisé par: Aucun";
-				label.style.color = Color.gray;
+				label.text        = "None";
+				label.style.color = StyleKeyword.Null;
 			} else {
-				label.text        = $"Utilisé par: {string.Join(", ", usedBy)}";
-				label.style.color = Color.cyan;
+				label.text        = string.Join(", ", usedBy);
+				label.style.color = StyleKeyword.Null;
 			}
-		}
-
-		public void Dispose() {
-			EditorApplication.update -= UpdateMicrophoneInfo;
-			_root?.Clear();
 		}
 	}
 }
