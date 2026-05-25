@@ -7,7 +7,7 @@
   ],
   "name": "Microphone",
   "version": "1.0.0",
-  "description": "Provides the Microphone action to use the game.",
+  "description": "Captures and streams microphone audio within Nox sessions.",
   "license": "GPL-3.0",
   "icon": null,
   "contact": {
