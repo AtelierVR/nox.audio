@@ -23,7 +23,6 @@
       "website": "https://hactazia.fr/"
     }
   ],
-  "contributors": [],
   "relations": [
     {
       "id": "settings",
@@ -57,7 +56,5 @@
     "client": [
       "Nox.Microphone.Runtime.Client"
     ]
-  },
-  "references": [],
-  "permissions": []
+  }
 }
