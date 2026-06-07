@@ -1,3 +1,4 @@
+using Nox.CCK.Microphone;
 using Nox.CCK.Settings;
 using Nox.CCK.Utils;
 using Nox.UI;
@@ -24,10 +25,21 @@ namespace Nox.Microphone.Runtime {
 		public override string[] GetPath()
 			=> new[] { "audio", "microphone", "activation" };
 
+		public static float Value {
+			get => Config.Load().Get("settings.voice.activation", 0.1f);
+			set {
+				var config = Config.Load();
+				config.Set("settings.voice.activation", value);
+				config.Save();
+				MicrophoneSettings.ActivationThreshold = value;
+				MicrophoneSettings.OnActivationThresholdChanged.Invoke(value);
+			}
+		}
+
 		public ActivationMicSetting() {
 			SetRange(0f, 1f);
 			SetStep(0.001f);
-			SetValue(Main.Instance.Manager.ConfigActivation);
+			SetValue(Value, notify: false);
 			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
 			SetValueKey("settings.range.value.percent");
 		}
@@ -45,6 +57,6 @@ namespace Nox.Microphone.Runtime {
 		}
 
 		override protected void OnValueChanged(float value)
-			=> Main.Instance.Manager.ConfigActivation = value;
+			=> Value = value;
 	}
 }

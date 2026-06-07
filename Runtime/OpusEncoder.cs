@@ -43,10 +43,11 @@ namespace Nox.Microphone.Runtime {
 					throw new ObjectDisposedException("OpusEncoderInstance");
 				}
 
-				// Convert float to short
+				// Convert float to short with clamping to prevent overflow distortion
 				short[] shortData = new short[pcmData.Length];
 				for (int i = 0; i < pcmData.Length; i++) {
-					shortData[i] = (short)(pcmData[i] * 32767f);
+					float clamped = Math.Max(-1f, Math.Min(1f, pcmData[i]));
+					shortData[i] = (short)(clamped * 32767f);
 				}
 
 				byte[] outputBuffer = new byte[4000]; // Max Opus packet size

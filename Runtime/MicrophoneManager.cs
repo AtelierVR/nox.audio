@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nox.CCK.Utils;
-using UnityEngine;
 using UnityEngine.Events;
 using Logger = Nox.CCK.Utils.Logger;
 using UnityMicrophone = UnityEngine.Microphone;
@@ -48,29 +47,11 @@ namespace Nox.Microphone.Runtime {
 			}
 		}
 
-		public float ConfigVolume {
-			get => Config.Load().Get("settings.voice.volume", 1f);
-			set {
-				var config = Config.Load();
-				config.Set("settings.voice.volume", value);
-				config.Save();
-			}
-		}
-
-		public float ConfigActivation {
-			get => Config.Load().Get("settings.voice.activation", 0.1f);
-			set {
-				var config = Config.Load();
-				config.Set("settings.voice.activation", value);
-				config.Save();
-			}
-		}
-
 		public MicrophoneManager()
 			=> Refresh();
 
 		public void Refresh() {
-			var currentNames = Microphones.Select(m => m.GetName()).ToList();
+			var currentNames = Microphones.ConvertAll(m => m.GetName());
 			var deviceNames  = UnityMicrophone.devices.ToList();
 
 			// Sauvegarder l'état précédent pour comparaison

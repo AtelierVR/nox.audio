@@ -1,15 +1,8 @@
 {
-    "name": "Nox.Microphone.Runtime",
+    "name": "Nox.CCK.Microphone",
     "rootNamespace": "",
     "references": [
-        "Nox.CCK",
-        "Nox.Editor.Panel",
-        "UniTask",
-        "Nox.Microphone",
-        "Nox.Settings",
-        "Nox.CCK.Settings",
-        "Nox.UI",
-        "Nox.CCK.Microphone"
+        "Nox.CCK"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

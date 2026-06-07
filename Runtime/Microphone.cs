@@ -38,7 +38,7 @@ namespace Nox.Microphone.Runtime {
 				_usedBy.Add(by);
 			if (IsRecording())
 				return _audioClip;
-			_audioClip = UnityMicrophone.Start(_name, true, 10, 44100);
+			_audioClip = UnityMicrophone.Start(_name, true, 10, 48000);
 			if (!_audioClip)
 				_usedBy.Remove(by);
 			return _audioClip;

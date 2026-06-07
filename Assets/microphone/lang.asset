@@ -29,6 +29,10 @@ MonoBehaviour:
       value: "Volume"
     - key: settings.entry.audio.microphone.activation.label
       value: "Activation Threshold"
+    - key: settings.entry.audio.microphone.mute.label
+      value: "Mute"
+    - key: settings.entry.audio.microphone.noise_suppression.label
+      value: "Noise Suppression"
   - IETF: fr-FR
     entries:
     - key: audio.microphone.default
@@ -45,3 +49,7 @@ MonoBehaviour:
       value: "Volume"
     - key: settings.entry.audio.microphone.activation.label
       value: "Seuil d'activation"
+    - key: settings.entry.audio.microphone.mute.label
+      value: "Muet"
+    - key: settings.entry.audio.microphone.noise_suppression.label
+      value: "Suppression du bruit"

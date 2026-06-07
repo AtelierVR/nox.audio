@@ -39,7 +39,9 @@ namespace Nox.Microphone.Runtime {
 			return options;
 		}
 
-		protected override void OnValueChanged(string value)
-			=> Main.Instance.Manager.CurrentConfigName = value;
+		protected override void OnValueChanged(string value) {
+			Main.Instance.Manager.CurrentConfigName = value;
+			// MicrophoneSettings.CurrentMicrophone is updated in Main.OnMicrophoneCurrentChanged
+		}
 	}
 }
