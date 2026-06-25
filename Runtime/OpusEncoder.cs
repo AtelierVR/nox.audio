@@ -1,80 +1,57 @@
 using System;
-using System.Runtime.InteropServices;
+using Concentus;
+using Concentus.Enums;
 
 namespace Nox.Microphone.Runtime {
+	/// <summary>
+	/// Opus audio encoder — managed Concentus wrapper (no native P/Invoke).
+	/// Works in IL2CPP, WebGL, and all Unity platforms.
+	/// </summary>
 	public static class OpusEncoder {
-		private const int OpusOk                = 0;
-		private const int OpusApplicationVoip   = 2048;
-		private const int OpusSetBitrateRequest = 4002;
-
-		[DllImport("opus")]
-		private static extern IntPtr opus_encoder_create(int fs, int channels, int application, out int error);
-
-		[DllImport("opus")]
-		private static extern void opus_encoder_destroy(IntPtr encoder);
-
-		[DllImport("opus")]
-		private static extern int opus_encode(IntPtr encoder, IntPtr pcm, int frameSize, IntPtr data, int maxDataBytes);
-
-		[DllImport("opus")]
-		private static extern int opus_encoder_ctl(IntPtr encoder, int request, int value);
-
 		public class OpusEncoderInstance : IDisposable {
-			private IntPtr _encoder;
-			private bool   _disposed;
+			private readonly IOpusEncoder _encoder;
+			private readonly byte[] _buffer;
+			private bool _disposed;
 
-			public bool IsValid
-				=> _encoder != IntPtr.Zero;
+			public bool IsValid => !_disposed;
 
+			/// <summary>
+			/// Create an Opus encoder instance.
+			/// </summary>
+			/// <param name="sampleRate">Sample rate (48000 recommended).</param>
+			/// <param name="channels">Number of channels (1 = mono).</param>
+			/// <param name="bitrate">Target bitrate in bps.</param>
 			public OpusEncoderInstance(int sampleRate, int channels, int bitrate) {
-				int error;
-				_encoder = opus_encoder_create(sampleRate, channels, OpusApplicationVoip, out error);
+				_encoder = OpusCodecFactory.CreateEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP);
+				_encoder.Bitrate = bitrate;
+				_encoder.Complexity = 10;
+				_encoder.SignalType = OpusSignal.OPUS_SIGNAL_VOICE;
+				_encoder.ForceMode = OpusMode.MODE_SILK_ONLY;
+				_encoder.Bandwidth = OpusBandwidth.OPUS_BANDWIDTH_WIDEBAND;
 
-				if (error != OpusOk || _encoder == IntPtr.Zero) {
-					throw new Exception($"Failed to create Opus encoder: {error}");
-				}
-
-				// Set bitrate
-				opus_encoder_ctl(_encoder, OpusSetBitrateRequest, bitrate);
+				_buffer = new byte[1275]; // Max Opus packet size
 			}
 
+			/// <summary>
+			/// Encode PCM float samples to Opus bytes.
+			/// </summary>
+			/// <param name="pcmData">Float PCM samples [-1..1].</param>
+			/// <param name="frameSize">Samples per channel per frame (e.g. 960 for 20ms @ 48kHz).</param>
+			/// <returns>Opus-encoded byte array, or null on failure.</returns>
 			public byte[] Encode(float[] pcmData, int frameSize) {
-				if (_disposed || _encoder == IntPtr.Zero) {
-					throw new ObjectDisposedException("OpusEncoderInstance");
-				}
+				if (_disposed) throw new ObjectDisposedException(nameof(OpusEncoderInstance));
 
-				// Convert float to short with clamping to prevent overflow distortion
-				short[] shortData = new short[pcmData.Length];
-				for (int i = 0; i < pcmData.Length; i++) {
-					float clamped = Math.Max(-1f, Math.Min(1f, pcmData[i]));
-					shortData[i] = (short)(clamped * 32767f);
-				}
+				int bytesEncoded = _encoder.Encode(pcmData, frameSize, _buffer, _buffer.Length);
+				if (bytesEncoded <= 0) return null;
 
-				byte[] outputBuffer = new byte[4000]; // Max Opus packet size
-
-				GCHandle pcmHandle    = GCHandle.Alloc(shortData, GCHandleType.Pinned);
-				GCHandle outputHandle = GCHandle.Alloc(outputBuffer, GCHandleType.Pinned);
-
-				try {
-					int encodedBytes = opus_encode(_encoder, pcmHandle.AddrOfPinnedObject(), frameSize, outputHandle.AddrOfPinnedObject(), outputBuffer.Length);
-
-					if (encodedBytes < 0) {
-						throw new Exception($"Opus encoding failed: {encodedBytes}");
-					}
-
-					byte[] result = new byte[encodedBytes];
-					Array.Copy(outputBuffer, result, encodedBytes);
-					return result;
-				} finally {
-					pcmHandle.Free();
-					outputHandle.Free();
-				}
+				byte[] result = new byte[bytesEncoded];
+				Array.Copy(_buffer, result, bytesEncoded);
+				return result;
 			}
 
 			public void Dispose() {
-				if (!_disposed && _encoder != IntPtr.Zero) {
-					opus_encoder_destroy(_encoder);
-					_encoder  = IntPtr.Zero;
+				if (!_disposed) {
+					_encoder?.Dispose();
 					_disposed = true;
 				}
 			}
