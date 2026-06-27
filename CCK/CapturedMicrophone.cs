@@ -1,29 +1,33 @@
 using UnityEngine;
+using Nox.Audio.Players;
+using Nox.Audio;
 
-namespace Nox.Microphone.Players {
+namespace Nox.CCK.Audio {
 	/// <summary>
 	/// <see cref="IAudio"/> implementation backed by a live <see cref="IMicrophone"/> device.
 	/// Created by the controller's <c>MicrophoneConnector</c> and assigned to the local
 	/// player's <see cref="ILocalPlayerVoice.Audio"/>.
 	/// <para>
 	/// The clip is obtained once from <c>IMicrophone.Start()</c> and held for the lifetime
-	/// of the session binding; <see cref="GetPosition"/> delegates to the microphone device
+	/// of the session binding; <see cref="Position"/> delegates to the microphone device
 	/// so every consumer always reads the freshest write head.
 	/// </para>
 	/// </summary>
-	public sealed class MicrophoneAudio : IAudio {
+	public sealed class CapturedMicrophone : ICapturedAudio {
 		private readonly AudioClip   _clip;
-		private readonly IMicrophone _mic;
+		private readonly IMicrophone _microphone;
 
-		public MicrophoneAudio(AudioClip clip, IMicrophone mic) {
+		public CapturedMicrophone(AudioClip clip, IMicrophone microphone) {
 			_clip = clip;
-			_mic  = mic;
+			_microphone  = microphone;
 		}
 
 		/// <inheritdoc/>
-		public AudioClip Clip => _clip;
+		public AudioClip Clip 
+			=> _clip;
 
 		/// <inheritdoc/>
-		public int GetPosition() => _mic.GetPosition();
+		public int Position 
+			=> _microphone.Position;
 	}
 }

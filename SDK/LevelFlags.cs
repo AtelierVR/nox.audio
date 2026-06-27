@@ -1,4 +1,4 @@
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Voice activity / loudness level flags for a player.
 	/// Levels mirror the three <c>VoiceMode</c> ranges and are used to

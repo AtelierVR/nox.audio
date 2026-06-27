@@ -1,9 +1,9 @@
 #if UNITY_EDITOR
-using Nox.Microphone.Runtime;
+using Nox.Audio.Runtime;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
 
-namespace Nox.Microphone.Runtime {
+namespace Nox.Audio.Runtime {
 	public class Editor : IEditorModInitializer {
 		internal static IEditorModCoreAPI CoreAPI;
 

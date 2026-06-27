@@ -1,6 +1,6 @@
 {
-  "name": "nox.microphone",
-  "displayName": "Nox - Microphone",
+  "name": "nox.audio",
+  "displayName": "Nox - Audio",
   "version": "1.0.0",
-  "description": "Captures and streams microphone audio within Nox sessions."
+  "description": "Captures and streams audio."
 }

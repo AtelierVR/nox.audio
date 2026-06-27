@@ -1,14 +1,14 @@
 {
-    "name": "Nox.CCK.Audio",
+    "name": "Nox.Audio",
     "rootNamespace": "",
     "references": [
         "Nox.CCK",
-        "Nox.Audio"
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": true,
+    "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],

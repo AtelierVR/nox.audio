@@ -1,37 +1,45 @@
-using Nox.CCK.Microphone;
 using Nox.CCK.Settings;
-using Nox.CCK.Utils;
 using UnityEngine;
 
-namespace Nox.Microphone.Runtime {
+namespace Nox.Audio.Runtime {
 	/// <summary>
 	/// Toggle: enable/disable noise suppression (noise gate) on microphone input.
 	/// Path: audio > microphone > noise_suppression
 	/// </summary>
-	public sealed class NoiseSuppressionSetting : ToggleHandler {
+	public sealed class NoiseSuppressionSetting : ToggleHandler, IAudioSetting {
+		public const float NORMAL = 0.6f;
+		public const float DISABLED = 0f;
+
 		public override string[] GetPath()
 			=> new[] { "audio", "microphone", "noise_suppression" };
 
-		protected override GameObject GetPrefab()
-			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");
+		public override int GetOrder()
+			=> 1;
 
-		public static bool Value {
-			get => Config.Load().Get("settings.voice.noise_suppression", false);
-			set {
-				var config = Config.Load();
-				config.Set("settings.voice.noise_suppression", value);
-				config.Save();
-				MicrophoneSettings.NoiseSuppression = value;
-				MicrophoneSettings.OnNoiseSuppressionChanged.Invoke(value);
-			}
-		}
+		override protected GameObject GetPrefab()
+			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");
 
 		public NoiseSuppressionSetting() {
 			SetValue(Value, notify: false);
 			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
+
+			Main.MicrophoneManager.OnCurrentChanged.AddListener(UpdateCurrent);
+			UpdateCurrent(Main.MicrophoneManager.Current);
 		}
 
-		protected override void OnValueChanged(bool value)
-			=> Value = value;
+		public void Dispose()
+			=> Main.MicrophoneManager.OnCurrentChanged.RemoveListener(UpdateCurrent);
+
+		private void UpdateCurrent(Microphone.Microphone arg0)
+			=> SetValue(
+				Mathf.Approximately(Main.MicrophoneManager.Current.NoiseSuppression, NORMAL),
+				notify: false
+			);
+
+		override protected void OnValueChanged(bool value)
+			=> Main.MicrophoneManager.Current.NoiseSuppression = value
+				? NORMAL
+				: DISABLED;
+
 	}
 }

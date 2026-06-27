@@ -1,4 +1,4 @@
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Listening / hearing mode for a player — controls what range of voices they can receive.
 	/// Server-authoritative: clients read this value but cannot set it directly.

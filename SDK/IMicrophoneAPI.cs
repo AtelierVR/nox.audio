@@ -1,10 +1,12 @@
-namespace Nox.Microphone {
+using System.Collections.Generic;
+
+namespace Nox.Audio {
 	public interface IMicrophoneAPI {
-		public IMicrophone   GetDefault();
-		
-		public IMicrophone[] GetAll();
-		
-		public IMicrophone   GetCurrent();
+		public IMicrophone Default { get; }
+
+		public IEnumerable<IMicrophone> All { get; }
+
+		public IMicrophone Current { get; }
 
 		public IMicrophone Get(string name);
 	}

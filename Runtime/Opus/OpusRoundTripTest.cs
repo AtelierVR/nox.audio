@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Nox.Microphone.Runtime {
+namespace Nox.Audio.Runtime {
 	/// <summary>
 	/// Test MonoBehaviour: simulates a streaming Opus encode/decode pipeline.
 	/// Each Update tick one frame is encoded (Send) then decoded (Receive) and

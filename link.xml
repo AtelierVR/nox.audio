@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <linker>
 	<assembly fullname="Concentus" preserve="all" />
-	<assembly fullname="Nox.CCK.Microphone" preserve="all" />
-	<assembly fullname="Nox.Microphone" preserve="all" />
-	<assembly fullname="Nox.Microphone.Runtime" preserve="all" />
+	<assembly fullname="Nox.Audio" preserve="all" />
+	<assembly fullname="Nox.Audio.Runtime" preserve="all" />
+	<assembly fullname="Nox.CCK.Audio" preserve="all" />
 	<assembly fullname="opus" preserve="all" />
 </linker>

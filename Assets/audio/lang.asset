@@ -31,8 +31,14 @@ MonoBehaviour:
       value: "Activation Threshold"
     - key: settings.entry.audio.microphone.mute.label
       value: "Mute"
+    - key: mute.active
+      value: "Muted"
     - key: settings.entry.audio.microphone.noise_suppression.label
       value: "Noise Suppression"
+    - key: settings.group.audio.channel.label
+      value: "Channels"
+    - key: settings.entry.audio.channel.general
+      value: "General"
   - IETF: fr-FR
     entries:
     - key: audio.microphone.default
@@ -53,3 +59,9 @@ MonoBehaviour:
       value: "Muet"
     - key: settings.entry.audio.microphone.noise_suppression.label
       value: "Suppression du bruit"
+    - key: settings.group.audio.channel.label
+      value: "Canaux"
+    - key: settings.entry.audio.channel.general
+      value: "Général"
+    - key: mute.active
+      value: "Muet"

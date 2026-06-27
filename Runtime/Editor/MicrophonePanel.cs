@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using Nox.Audio.Runtime.Microphone;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
 using Nox.Editor.Panel;
@@ -8,7 +9,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor;
 
-namespace Nox.Microphone.Runtime {
+namespace Nox.Audio.Runtime {
 	public class MicrophonePanel : IEditorModInitializer, Nox.Editor.Panel.IPanel {
 		internal IEditorModCoreAPI        API;
 		internal MicrophonePanelInstance  Instance;
@@ -30,7 +31,7 @@ namespace Nox.Microphone.Runtime {
 		private readonly MicrophonePanel   _panel;
 		private readonly IWindow           _window;
 		private          VisualElement     _root;
-		private          MicrophoneManager _microphoneManager;
+		private          MicrophoneManager _manager;
 		private          ScrollView        _list;
 		private          VisualElement     _empty;
 		private          float             _lastUpdateTime;
@@ -62,8 +63,7 @@ namespace Nox.Microphone.Runtime {
 			_list  = _root.Q<ScrollView>("list");
 			_empty = _root.Q<VisualElement>("empty");
 
-			if (Main.Instance != null)
-				_microphoneManager = Main.Instance.Manager;
+			_manager = Main.MicrophoneManager;
 
 			RefreshMicrophones();
 			EditorApplication.update += UpdateMicrophoneInfo;
@@ -73,17 +73,17 @@ namespace Nox.Microphone.Runtime {
 		private void RefreshMicrophones() {
 			_list.Clear();
 
-			var hasMics = _microphoneManager != null && _microphoneManager.Microphones.Count > 0;
+			var hasMics = _manager != null && _manager.Microphones.Count > 0;
 			_empty?.EnableInClassList("hidden", hasMics);
-			_list?.EnableInClassList("hidden", !hasMics);
+			_list.EnableInClassList("hidden", !hasMics);
 
 			if (!hasMics) return;
 
-			foreach (var mic in _microphoneManager.Microphones)
+			foreach (var mic in _manager.Microphones)
 				_list.Add(CreateMicrophoneItem(mic));
 		}
 
-		private VisualElement CreateMicrophoneItem(Microphone microphone) {
+		private VisualElement CreateMicrophoneItem(Microphone.Microphone microphone) {
 			var container = new GroupBox();
 			container.AddToClassList("p-8");
 			container.AddToClassList("m-0");
@@ -95,22 +95,22 @@ namespace Nox.Microphone.Runtime {
 			header.AddToClassList("align-center");
 			header.AddToClassList("mb-4");
 
-			var nameLabel = new Label(microphone.GetName());
+			var nameLabel = new Label(microphone.Name);
 			nameLabel.AddToClassList("text-sm");
 			nameLabel.AddToClassList("flex-grow");
-			nameLabel.EnableInClassList("text-bold", microphone.IsDefault());
+			nameLabel.EnableInClassList("text-bold", microphone.IsDefault);
 
 			header.Add(nameLabel);
 
-			if (microphone.IsDefault()) {
+			if (microphone.IsDefault) {
 				var badge = new Label("DEFAULT");
 				badge.AddToClassList("badge");
 				badge.AddToClassList("badge-warning");
 				header.Add(badge);
 			}
 
-			if (_microphoneManager.CurrentMicrophone == microphone) {
-				var badge = new Label("ACTIVE");
+			if (microphone.IsCurrent) {
+				var badge = new Label("CURRENT");
 				badge.AddToClassList("badge");
 				badge.AddToClassList("badge-success");
 				header.Add(badge);
@@ -129,7 +129,7 @@ namespace Nox.Microphone.Runtime {
 			recLabel.AddToClassList("opacity-75");
 
 			var recStatus = new Label();
-			recStatus.name = $"recording-{microphone.GetIndex()}";
+			recStatus.name = $"recording-{microphone.GetHashCode()}";
 			recStatus.AddToClassList("flex-grow");
 			UpdateRecordingStatus(recStatus, microphone);
 
@@ -148,7 +148,7 @@ namespace Nox.Microphone.Runtime {
 			volLabel.AddToClassList("opacity-75");
 
 			var loudnessBar = new ProgressBar();
-			loudnessBar.name = $"loudness-{microphone.GetIndex()}";
+			loudnessBar.name = $"loudness-{microphone.GetHashCode()}";
 			loudnessBar.AddToClassList("flex-grow");
 			UpdateLoudnessBar(loudnessBar, microphone);
 
@@ -166,7 +166,7 @@ namespace Nox.Microphone.Runtime {
 			usedByKeyLabel.AddToClassList("opacity-75");
 
 			var usedByLabel = new Label();
-			usedByLabel.name = $"usedby-{microphone.GetIndex()}";
+			usedByLabel.name = $"usedby-{microphone.GetHashCode()}";
 			usedByLabel.AddToClassList("flex-grow");
 			UpdateUsedByLabel(usedByLabel, microphone);
 
@@ -175,10 +175,10 @@ namespace Nox.Microphone.Runtime {
 			container.Add(usedByRow);
 
 			// Technical info
-			var freqs = microphone.GetFrequencies();
+			var freqs = microphone.Frequencies;
 			var techRow = new VisualElement();
 			techRow.AddToClassList("mt-4");
-			var techLabel = new Label($"Index: {microphone.GetIndex()} | {freqs.x}Hz – {freqs.y}Hz");
+			var techLabel = new Label($"{freqs.x}Hz – {freqs.y}Hz");
 			techLabel.AddToClassList("text-xs");
 			techLabel.AddToClassList("opacity-50");
 			techRow.Add(techLabel);
@@ -190,32 +190,32 @@ namespace Nox.Microphone.Runtime {
 		private void UpdateMicrophoneInfo() {
 			if (Time.realtimeSinceStartup - _lastUpdateTime < UpdateInterval) return;
 			_lastUpdateTime = Time.realtimeSinceStartup;
-			if (_microphoneManager == null || _list == null) return;
+			if (_manager == null || _list == null) return;
 
-			foreach (var mic in _microphoneManager.Microphones) {
-				var recEl  = _list.Q<Label>($"recording-{mic.GetIndex()}");
-				var louEl  = _list.Q<ProgressBar>($"loudness-{mic.GetIndex()}");
-				var useEl  = _list.Q<Label>($"usedby-{mic.GetIndex()}");
-				if (recEl != null)  UpdateRecordingStatus(recEl, mic);
-				if (louEl != null)  UpdateLoudnessBar(louEl, mic);
-				if (useEl != null)  UpdateUsedByLabel(useEl, mic);
+			foreach (var microphone in _manager.Microphones) {
+				var recEl = _list.Q<Label>($"recording-{microphone.GetHashCode()}");
+				var louEl = _list.Q<ProgressBar>($"loudness-{microphone.GetHashCode()}");
+				var useEl = _list.Q<Label>($"usedby-{microphone.GetHashCode()}");
+				if (recEl != null)  UpdateRecordingStatus(recEl, microphone);
+				if (louEl != null)  UpdateLoudnessBar(louEl, microphone);
+				if (useEl != null)  UpdateUsedByLabel(useEl, microphone);
 			}
 		}
 
-		private static void UpdateRecordingStatus(Label label, Microphone mic) {
-			var isRecording = mic.IsRecording();
+		private static void UpdateRecordingStatus(Label label, Microphone.Microphone mic) {
+			var isRecording = mic.IsRecording;
 			label.text = isRecording ? "Recording" : "Idle";
 			label.EnableInClassList("text-danger", isRecording);
 		}
 
-		private static void UpdateLoudnessBar(ProgressBar bar, Microphone mic) {
-			var v    = mic.GetLoudness();
+		private static void UpdateLoudnessBar(ProgressBar bar, Microphone.Microphone mic) {
+			var v    = mic.Loudness;
 			bar.value = v * 100f;
 			bar.title = $"{v:P0}";
 		}
 
-		private static void UpdateUsedByLabel(Label label, Microphone mic) {
-			var usedBy = mic.UsedBy();
+		private static void UpdateUsedByLabel(Label label, Microphone.Microphone mic) {
+			var usedBy = mic.UsedBy;
 			if (usedBy == null || usedBy.Length == 0) {
 				label.text        = "None";
 				label.style.color = StyleKeyword.Null;

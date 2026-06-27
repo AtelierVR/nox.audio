@@ -1,7 +1,7 @@
 using System;
 using Concentus;
 
-namespace Nox.Microphone.Runtime {
+namespace Nox.Audio.Runtime {
 	/// <summary>
 	/// Opus audio decoder — managed Concentus wrapper (no native P/Invoke).
 	/// Works in IL2CPP, WebGL, and all Unity platforms.

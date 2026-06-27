@@ -1,4 +1,4 @@
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Extends <see cref="IPlayerVoice"/> for the local player.
 	/// Allows a controller (Desktop, XR, …) to push a <see cref="MicrophoneAudio"/>
@@ -6,7 +6,7 @@ namespace Nox.Microphone.Players {
 	/// </summary>
 	public interface ILocalPlayerVoice : IPlayerVoice {
 		/// <summary>
-		/// Get or set the live <see cref="IAudio"/> for this local player.
+		/// Get or set the live <see cref="ICapturedAudio"/> for this local player.
 		/// <para>
 		/// The controller assigns a <see cref="MicrophoneAudio"/> built from
 		/// <c>IMicrophone.Start()</c>. The relay <c>VoiceSender</c> reads the clip
@@ -14,6 +14,6 @@ namespace Nox.Microphone.Players {
 		/// avatar AudioSource to the live write head.
 		/// </para>
 		/// </summary>
-		new IAudio Audio { get; set; }
+		new ICapturedAudio Audio { get; set; }
 	}
 }

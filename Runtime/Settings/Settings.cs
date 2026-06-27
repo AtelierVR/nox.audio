@@ -1,12 +1,12 @@
 using Nox.CCK.Events;
 
-namespace Nox.CCK.Microphone {
+namespace Nox.Audio.Runtime {
 	/// <summary>
-	/// Global microphone settings. Pure static data store — no logic, no setters.
+	/// Global audio settings. Pure static data store — no logic, no setters.
 	/// Values are written and events are invoked by the Runtime assembly.
 	/// Follows the MirrorSettings CCK pattern.
 	/// </summary>
-	public static class MicrophoneSettings {
+	public static class Settings {
 		// ── Activation Threshold ──────────────────────
 
 		public const float MinimalActivationThreshold = 0.001f;

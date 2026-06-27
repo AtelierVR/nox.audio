@@ -1,20 +1,20 @@
 {
   "type": "mod",
-  "id": "nox.microphone",
+  "id": "nox.audio",
   "provides": [
-    "fr.hactazia.microphone",
-    "microphone"
+    "fr.hactazia.audio",
+    "audio"
   ],
-  "name": "Microphone",
+  "name": "Audio",
   "version": "1.0.0",
-  "description": "Captures and streams microphone audio within Nox sessions.",
+  "description": "Captures and streams audio.",
   "license": "GPL-3.0",
   "icon": null,
   "contact": {
     "email": "hactazia@gmail.com",
-    "source": "https://github.com/AtelierVR/nox.microphone",
+    "source": "https://github.com/AtelierVR/nox.audio",
     "website": "https://nox.hactazia.fr/",
-    "issues": "https://github.com/AtelierVR/nox.microphone/issues"
+    "issues": "https://github.com/AtelierVR/nox.audio/issues"
   },
   "authors": [
     {
@@ -47,14 +47,11 @@
   ],
   "entrypoints": {
     "main": [
-      "Nox.Microphone.Runtime.Main"
+      "Nox.Audio.Runtime.Main"
     ],
     "editor": [
-      "Nox.Microphone.Runtime.Editor",
-      "Nox.Microphone.Runtime.MicrophonePanel"
-    ],
-    "client": [
-      "Nox.Microphone.Runtime.Client"
+      "Nox.Audio.Runtime.Editor",
+      "Nox.Audio.Runtime.MicrophonePanel"
     ]
   }
 }

@@ -1,17 +1,23 @@
 using UnityEngine;
 
-namespace Nox.Microphone {
+namespace Nox.Audio {
 	public interface IMicrophone {
-		public string GetName();
+		public string Name { get; }
 
-		public int GetPosition();
+		public int Position { get; }
 
-		public float GetLoudness();
+		public float Loudness { get; }
 
 		public AudioClip Start(string by);
 
 		public void Stop(string by);
 
-		public Vector2 GetFrequencies();
+		public Vector2 Frequencies { get; }
+
+		public bool IsMuted { get; set; }
+
+		public float Volume { get; set; }
+		
+		public float NoiseSuppression { get; set; }
 	}
 }

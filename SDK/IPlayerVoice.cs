@@ -1,11 +1,11 @@
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Voice info exposed by every player (local and remote).
-	/// Placed in <c>nox.microphone</c> similarly to how <c>IPlayerAvatar</c>
+	/// Placed in <c>Nox.Audio</c> similarly to how <c>IPlayerAvatar</c>
 	/// is placed in <c>nox.avatars</c>.
 	/// <para>
 	/// Consumers (UI, desktop, XR) can query voice state, the live
-	/// <see cref="IAudio"/>, and the current activity <see cref="LevelFlags"/>
+	/// <see cref="ICapturedAudio"/>, and the current activity <see cref="LevelFlags"/>
 	/// without depending on the relay runtime.
 	/// </para>
 	/// </summary>
@@ -29,12 +29,12 @@ namespace Nox.Microphone.Players {
 		SpeakMode Speak { get; set; }
 
 		/// <summary>
-		/// The <see cref="IAudio"/> currently associated with this player's voice.
+		/// The <see cref="ICapturedAudio"/> currently associated with this player's voice.
 		/// For a remote player this is <c>null</c> (playback is handled internally).
 		/// For the local player this is the live microphone source (see <see cref="ILocalPlayerVoice"/>).
 		/// Returns <c>null</c> when no voice is active.
 		/// </summary>
-		IAudio Audio { get; }
+		ICapturedAudio Audio { get; }
 
 		/// <summary>
 		/// Current voice activity level, updated each frame.

@@ -1,21 +1,24 @@
 {
-    "name": "Nox.Mods.Microphone",
+    "name": "Nox.Audio.Runtime",
     "rootNamespace": "",
     "references": [
-        "UniTask",
         "Nox.CCK",
-        "Nox.Microphone",
+        "Nox.Editor.Panel",
+        "UniTask",
+        "Nox.Audio",
         "Nox.Settings",
         "Nox.CCK.Settings",
         "Nox.UI",
-        "Nox.Microphone.Runtime"
+        "Nox.CCK.Audio"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
-    "precompiledReferences": [],
-    "autoReferenced": false,
+    "precompiledReferences": [
+        "Concentus.dll"
+    ],
+    "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false

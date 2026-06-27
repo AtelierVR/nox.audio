@@ -1,4 +1,4 @@
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Speaking / emission mode for a player — controls voice range and whether they are heard at all.
 	/// </summary>

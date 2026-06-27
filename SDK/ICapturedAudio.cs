@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Nox.Microphone.Players {
+namespace Nox.Audio.Players {
 	/// <summary>
 	/// Abstracts a live audio source used by the voice pipeline.
 	/// Carries both the raw <see cref="AudioClip"/> buffer and the current
@@ -10,7 +10,7 @@ namespace Nox.Microphone.Players {
 	/// Use <see cref="MicrophoneAudio"/> to wrap a microphone device.
 	/// </para>
 	/// </summary>
-	public interface IAudio {
+	public interface ICapturedAudio {
 		/// <summary>The underlying <see cref="AudioClip"/> circular buffer.</summary>
 		AudioClip Clip { get; }
 
@@ -18,6 +18,6 @@ namespace Nox.Microphone.Players {
 		/// Current write position in samples within <see cref="Clip"/>.
 		/// Matches Unity's <c>Microphone.GetPosition()</c> when backed by a microphone.
 		/// </summary>
-		int GetPosition();
+		int Position { get; }
 	}
 }
