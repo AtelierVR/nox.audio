@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using Nox.CCK.Utils;
@@ -29,7 +30,7 @@ namespace Nox.Audio.Runtime.Channels {
 				sub
 			};
 
-		public readonly UnityEvent<float> OnVolumeChanged = new();
+		public readonly UnityEvent<float> OnVolume = new();
 
 		/// <summary>
 		/// Raw volume [0, 1]. Persisted via Config. Setting this notifies the manager to propagate to dependents.
@@ -44,12 +45,11 @@ namespace Nox.Audio.Runtime.Channels {
 				var config = Config.Load();
 				config.Set(GetSetting("volume"), val);
 				config.Save();
-				OnVolumeChanged.Invoke(val);
-				Main.CoreAPI.EventAPI.Emit("audio.channel.volume_changed", this, val, old);
+				OnVolumeChanged();
 			}
 		}
 
-		public readonly UnityEvent<bool> OnMuteChanged = new();
+		public readonly UnityEvent<bool> OnMute = new();
 
 		/// <summary>
 		/// Explicit mute. Persisted via Config. A channel is effectively muted if it is muted OR any parent is muted.
@@ -63,8 +63,7 @@ namespace Nox.Audio.Runtime.Channels {
 				var config = Config.Load();
 				config.Set(GetSetting("mute"), value);
 				config.Save();
-				OnMuteChanged.Invoke(value);
-				Main.CoreAPI.EventAPI.Emit("audio.channel.mute_changed", this, value);
+				OnMuteChanged();
 			}
 		}
 
@@ -99,6 +98,44 @@ namespace Nox.Audio.Runtime.Channels {
 				}
 
 				return effective;
+			}
+		}
+
+		/// <summary>
+		/// Called when a dependency's volume changed.
+		/// Because our EffectiveVolume depends on parents, we notify our own dependents.
+		/// </summary>
+		internal void OnVolumeChanged() {
+			OnVolume.Invoke(Volume);
+			Main.CoreAPI.EventAPI.Emit("audio.channel.volume_changed", this, Volume, EffectiveVolume);
+			NotifyDependentsVolumeChanged();
+		}
+
+		/// <summary>
+		/// Called when a dependency's mute state changed.
+		/// Because our IsEffectivelyMuted depends on parents, we notify our own dependents.
+		/// </summary>
+		internal void OnMuteChanged() {
+			OnMute.Invoke(IsMuted);
+			Main.CoreAPI.EventAPI.Emit("audio.channel.mute_changed", this, IsMuted, IsEffectivelyMuted);
+			NotifyDependentsMuteChanged();
+		}
+
+		private void NotifyDependentsVolumeChanged() {
+			foreach (var kvp in _manager.Channels) {
+				if (kvp.Value.Item1 == this)
+					continue;
+				if (kvp.Value.Item1.Depends.Contains(Id))
+					kvp.Value.Item1.OnVolumeChanged();
+			}
+		}
+
+		private void NotifyDependentsMuteChanged() {
+			foreach (var kvp in _manager.Channels) {
+				if (kvp.Value.Item1 == this)
+					continue;
+				if (kvp.Value.Item1.Depends.Contains(Id))
+					kvp.Value.Item1.OnMuteChanged();
 			}
 		}
 	}

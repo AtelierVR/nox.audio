@@ -41,5 +41,28 @@ namespace Nox.Audio.Players {
 		/// Combine with <see cref="LevelFlags.Speaking"/> to detect active voice.
 		/// </summary>
 		LevelFlags Level { get; }
+
+		/// <summary>
+		/// Per-player voice volume [0, 2], persisted locally in <c>.nox/</c>.
+		/// The effective volume heard by listeners is <see cref="EffectiveVolume"/>,
+		/// which also accounts for the <c>voice</c> and <c>general</c> channels.
+		/// </summary>
+		float Volume { get; set; }
+
+		/// <summary>
+		/// Whether this player is locally muted.
+		/// A player is effectively muted if locally muted OR any parent channel is muted.
+		/// </summary>
+		bool IsMuted { get; set; }
+
+		/// <summary>
+		/// Effective volume, clamped by the <c>voice</c> and <c>general</c> channel hierarchy.
+		/// </summary>
+		float EffectiveVolume { get; }
+
+		/// <summary>
+		/// Effective mute state, considering the channel hierarchy.
+		/// </summary>
+		bool IsEffectivelyMuted { get; }
 	}
 }

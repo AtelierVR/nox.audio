@@ -39,10 +39,6 @@
     {
       "type": "after",
       "id": "settings"
-    },
-    {
-      "type": "after",
-      "id": "ui"
     }
   ],
   "entrypoints": {

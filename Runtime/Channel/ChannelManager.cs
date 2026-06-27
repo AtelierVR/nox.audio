@@ -130,7 +130,7 @@ namespace Nox.Audio.Runtime.Channels {
 			var cancel = false;
 
 			if (!force)
-				Main.CoreAPI.EventAPI.Emit("audio.volume.remove_requested", channel, new Action<object[]>(Action));
+				Main.CoreAPI.EventAPI.Emit("audio.channel.remove_requested", channel, new Action<object[]>(Action));
 
 			if (cancel)
 				return;

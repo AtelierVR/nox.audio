@@ -50,11 +50,15 @@ namespace Nox.Audio.Runtime.Channels {
 			UpdateMuteType();
 		}
 
-		private void UpdateMuteType() {
-			SetTypeKey(_channel.IsMuted
-				? "mute.active"
-				: "settings.range.type.empty");
-		}
+		public override void OnUpdated(IHandler handler)
+			=> UpdateMuteType();
+
+		private void UpdateMuteType() 
+			=> SetTypeKey(
+				_channel.IsEffectivelyMuted
+					? "mute.active"
+					: "settings.range.type.empty"
+			);
 
 		override protected void OnValueChanged(float value)
 			=> _channel.Volume = value;

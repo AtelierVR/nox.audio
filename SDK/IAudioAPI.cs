@@ -12,7 +12,7 @@ namespace Nox.Audio {
 
 		/// <summary>
 		/// Request to unregister a volume audio channel.
-		/// by setting Event audio.volume.remove_requested to <c>false</c>.
+		/// by setting Event audio.channel.remove_requested to <c>false</c>.
 		/// If no listener cancels the request, the channel is removed.
 		/// </summary>
 		void UnRegister(string id);
