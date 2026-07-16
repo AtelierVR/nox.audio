@@ -3,6 +3,7 @@ using System.Linq;
 using Nox.CCK.Language;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
+using Nox.Controllers;
 using Nox.Settings;
 using Nox.UI;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using Nox.Audio.Runtime.Channels;
 namespace Nox.Audio.Runtime {
 	public class Main : IMainModInitializer, IMicrophoneAPI, IAudioAPI {
 		static internal IMainModCoreAPI CoreAPI;
-		static internal MicrophoneManager MicrophoneManager;
+		static public MicrophoneManager MicrophoneManager;
 		static internal ChannelManager ChannelManager;
 		private IAudioSetting[] Settings = Array.Empty<IAudioSetting>();
 		private LanguagePack _lang;
@@ -50,7 +51,8 @@ namespace Nox.Audio.Runtime {
 				new CurrentSetting(),
 				new VolumeSetting(),
 				new ActivationSetting(),
-				new NoiseSuppressionSetting()
+				new NoiseSuppressionSetting(),
+				new TestMicrophoneSetting()
 			};
 
 			foreach (var setting in Settings)
@@ -110,5 +112,12 @@ namespace Nox.Audio.Runtime {
 
 		public void UnRegister(string id)
 			=> ChannelManager.UnRegister(id);
+
+		// ── ControllerAPI ────────────────────────────
+
+		internal static IControllerAPI ControllerAPI
+			=> CoreAPI.ModAPI
+				.GetMod("controllers")
+				.GetInstance<IControllerAPI>();
 	}
 }
