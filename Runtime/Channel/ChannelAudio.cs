@@ -94,6 +94,8 @@ namespace Nox.Audio.Runtime.Channels {
 
 				foreach (var id in Depends) {
 					var depend = _manager.Get(id);
+					if (depend == null)
+						continue;
 					effective = Mathf.Min(effective, depend.EffectiveVolume);
 				}
 
