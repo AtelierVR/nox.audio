@@ -14,6 +14,7 @@ namespace Nox.Audio.Runtime.Microphone {
 		private readonly Vector2 _frequencies;
 		private int _index;
 		private readonly List<string> _usedBy;
+		private readonly MicrophoneProcessor _processor = new();
 
 		public Microphone(MicrophoneManager manager, string name, int index, int minFrequency, int maxFrequency) {
 			_manager     = manager;
@@ -167,6 +168,13 @@ namespace Nox.Audio.Runtime.Microphone {
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.noise_suppression_changed", this, val, old);
 			}
 		}
+
+		/// <summary>
+		/// Apply volume, noise suppression and activation gate to a raw PCM frame (in place).
+		/// Uses this microphone's own settings so it stays consistent with the settings UI.
+		/// </summary>
+		public void Process(float[] samples)
+			=> _processor.Process(samples, this);
 
 		public int CompareTo(IMicrophone other)
 			=> string.Compare(other.Name, Name, StringComparison.Ordinal);
