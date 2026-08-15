@@ -14,7 +14,7 @@ namespace Nox.Audio.Runtime.Microphone {
 		private readonly Vector2 _frequencies;
 		private int _index;
 		private readonly List<string> _usedBy;
-		private readonly MicrophoneProcessor _processor = new();
+		private ClipProcessor _processor;
 
 		public Microphone(MicrophoneManager manager, string name, int index, int minFrequency, int maxFrequency) {
 			_manager     = manager;
@@ -43,6 +43,8 @@ namespace Nox.Audio.Runtime.Microphone {
 			Clip = UnityMicrophone.Start(Name, true, 10, 48000);
 			if (!Clip)
 				_usedBy.Remove(by);
+			else
+				EnsureClipProcessor();
 			return Clip;
 		}
 
@@ -54,6 +56,7 @@ namespace Nox.Audio.Runtime.Microphone {
 				return;
 			UnityMicrophone.End(Name);
 			Clip = null;
+			DisposeClipProcessor();
 		}
 
 		public void ForceStop() {
@@ -62,7 +65,23 @@ namespace Nox.Audio.Runtime.Microphone {
 				return;
 			UnityMicrophone.End(Name);
 			Clip = null;
+			DisposeClipProcessor();
 		}
+
+		/// <summary>Starts the background processor that keeps the recorded clip DSP-processed.</summary>
+		private void EnsureClipProcessor() {
+			if (_processor != null)
+				return;
+			_processor = new ClipProcessor(this);
+		}
+
+		/// <summary>Stops and releases the background processor.</summary>
+		private void DisposeClipProcessor()
+			=> _processor = null;
+
+		/// <summary>Processes any newly recorded samples (called every frame by the manager).</summary>
+		internal void Update()
+			=> _processor?.ProcessAvailable();
 
 		public string Name { get; }
 
@@ -71,9 +90,9 @@ namespace Nox.Audio.Runtime.Microphone {
 
 		public AudioClip Clip { get; private set; }
 
-		/// <summary>Loudness of the last processed frame (post filters).</summary>
+		/// <summary>Loudness of the last processed frame (post volume + noise suppression, pre-gate).</summary>
 		public float Loudness
-			=> _processor.Loudness;
+			=> _processor?.Loudness ?? 0f;
 
 		public Vector2 Frequencies
 			=> _frequencies;
@@ -153,13 +172,6 @@ namespace Nox.Audio.Runtime.Microphone {
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.noise_suppression_changed", this, val, old);
 			}
 		}
-
-		/// <summary>
-		/// Apply volume, noise suppression and activation gate to a raw PCM frame (in place).
-		/// Uses this microphone's own settings so it stays consistent with the settings UI.
-		/// </summary>
-		public void Process(float[] samples)
-			=> _processor.Process(samples, this);
 
 		public int CompareTo(IMicrophone other)
 			=> string.Compare(other.Name, Name, StringComparison.Ordinal);

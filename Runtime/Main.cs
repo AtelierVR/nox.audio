@@ -58,8 +58,7 @@ namespace Nox.Audio.Runtime {
 				new CurrentSetting(),
 				new VolumeSetting(),
 				new ActivationSetting(),
-				new NoiseSuppressionSetting(),
-				new TestMicrophoneSetting()
+				new NoiseSuppressionSetting()
 			};
 
 			foreach (var setting in Settings)
@@ -71,6 +70,10 @@ namespace Nox.Audio.Runtime {
 		private DateTime _lastUpdate = DateTime.MinValue;
 
 		public void OnUpdateMain() {
+			// Per-frame: drive the microphone DSP (activation gate, etc.).
+			MicrophoneManager?.Update();
+
+			// Throttled: refresh the device list (hot-plug detection).
 			if ((DateTime.Now - _lastUpdate).TotalSeconds < 5)
 				return;
 			_lastUpdate = DateTime.Now;

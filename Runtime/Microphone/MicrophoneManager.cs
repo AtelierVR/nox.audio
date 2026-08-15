@@ -44,6 +44,16 @@ namespace Nox.Audio.Runtime.Microphone {
 		public MicrophoneManager()
 			=> Refresh();
 
+		/// <summary>
+		/// Called every frame to drive per-microphone DSP (clip processors). Only active
+		/// (recording) microphones have work to do.
+		/// </summary>
+		public void Update() {
+			foreach (var mic in Microphones)
+				if (mic != null && mic.IsRecording)
+					mic.Update();
+		}
+
 		public void Refresh() {
 			var currentNames = Microphones.ConvertAll(m => m.Name);
 			var deviceNames  = UnityMicrophone.devices.ToList();
