@@ -71,24 +71,9 @@ namespace Nox.Audio.Runtime.Microphone {
 
 		public AudioClip Clip { get; private set; }
 
-		public float Loudness {
-			get {
-				if (!IsRecording || !Clip)
-					return 0f;
-
-				var position = Position;
-				if (position <= 0)
-					return 0f;
-
-				var window  = Mathf.Min(1024, position);
-				var samples = new float[ window ];
-				var start   = Mathf.Max(0, position - window);
-				Clip.GetData(samples, start);
-				var sum = samples.Sum(t => t * t);
-				var rms = Mathf.Sqrt(sum / samples.Length);
-				return Mathf.Clamp01(rms * 10f);
-			}
-		}
+		/// <summary>Loudness of the last processed frame (post filters).</summary>
+		public float Loudness
+			=> _processor.Loudness;
 
 		public Vector2 Frequencies
 			=> _frequencies;
@@ -138,7 +123,7 @@ namespace Nox.Audio.Runtime.Microphone {
 		public readonly UnityEvent<float> OnActivationChanged = new();
 
 		public float Activation {
-			get => Config.Load().Get(GetSetting("activation"), .02f);
+			get => Config.Load().Get(GetSetting("activation"), .2f);
 			set {
 				var old = Activation;
 				var val = Mathf.Clamp(value, 0f, 1f);

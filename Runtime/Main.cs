@@ -36,6 +36,13 @@ namespace Nox.Audio.Runtime {
 			// Preload the native opus library (required by OpusEncoder / OpusDecoder)
 			api.LibAPI.Load("opus");
 
+			// Preload the native RNNoise denoiser (optional — mic still works without it).
+			try {
+				api.LibAPI.Load("rnnoise");
+			} catch (DllNotFoundException) {
+				CoreAPI.LoggerAPI.Log("RNNoise native library not found; noise suppression disabled.");
+			}
+
 			_lang = api.AssetAPI.GetAsset<LanguagePack>("lang.asset");
 			LanguageManager.AddPack(_lang);
 
@@ -82,6 +89,7 @@ namespace Nox.Audio.Runtime {
 			MicrophoneManager.Dispose();
 
 			CoreAPI.LibAPI.Unload("opus");
+			CoreAPI.LibAPI.Unload("rnnoise");
 
 			ChannelManager    = null;
 			MicrophoneManager = null;

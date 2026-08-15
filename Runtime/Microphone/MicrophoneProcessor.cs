@@ -8,13 +8,14 @@ namespace Nox.Audio.Runtime.Microphone {
 	/// <para>Use <c>MicrophoneProcessor.Process(samples)</c> to apply all enabled effects.</para>
 	/// </summary>
 	public class MicrophoneProcessor {
-		// ── Noise suppression state ──
-		private float[] _noiseProfile;
-		private float _noiseProfileTime;
-		private bool _noiseProfileReady;
+		// ── RNNoise denoiser (native) ──
+		private readonly RNNoise _denoiser = new();
 
 		// ── Activation gate state ──
 		private float _activationHoldTimer;
+
+		/// <summary>Loudness of the last processed frame (post volume + noise suppression, pre-gate).</summary>
+		public float Loudness { get; private set; }
 
 		/// <summary>
 		/// Apply mute, volume, noise suppression, and activation gate to a PCM frame.
@@ -28,6 +29,7 @@ namespace Nox.Audio.Runtime.Microphone {
 			if (mic.IsMuted) {
 				for (int i = 0; i < samples.Length; i++)
 					samples[i] = 0f;
+				Loudness = 0f;
 				return;
 			}
 
@@ -38,92 +40,30 @@ namespace Nox.Audio.Runtime.Microphone {
 					samples[i] *= volume;
 			}
 
-			// ── Noise suppression ──
-			float noiseSuppression = mic.NoiseSuppression;
-			if (noiseSuppression > 0f)
-				ApplyNoiseSuppression(samples, noiseSuppression, mic.Activation);
+			// ── Noise suppression (RNNoise) ──
+			if (mic.NoiseSuppression > 0f)
+				_denoiser.Process(samples);
+
+			// ── Loudness (post volume + noise suppression, pre-gate) ──
+			float sumSq = 0f;
+			for (int i = 0; i < samples.Length; i++)
+				sumSq += samples[i] * samples[i];
+			float rms = Mathf.Sqrt(sumSq / samples.Length);
+			Loudness = Mathf.Clamp01(rms * 10f);
 
 			// ── Activation gate ──
 			float activation = mic.Activation;
-			if (activation > 0f && !PassesActivationGate(samples, activation)) {
+			if (activation > 0f && !PassesActivationGate(activation)) {
 				// Silence the frame instead of dropping it (keeps frame index sync)
 				for (int i = 0; i < samples.Length; i++)
 					samples[i] = 0f;
 			}
 		}
 
-		// ── Noise Suppression (Spectral Subtraction) ──
-
-		private void ApplyNoiseSuppression(float[] samples, float strength, float activationThreshold) {
-			int frameSize = samples.Length;
-			int numBands = frameSize / 2;
-			if (numBands < 2) return;
-
-			// Resize noise profile if frame size changed
-			if (_noiseProfile == null || _noiseProfile.Length != numBands)
-				_noiseProfile = new float[numBands];
-
-			int bandSize = frameSize / numBands;
-			if (bandSize < 1) bandSize = 1;
-
-			// Compute per-band energy
-			float[] signalBands = new float[numBands];
-			float totalEnergy = 0f;
-			for (int b = 0; b < numBands; b++) {
-				float bandEnergy = 0f;
-				int bandStart = b * bandSize;
-				int count = 0;
-				for (int i = 0; i < bandSize && (bandStart + i) < frameSize; i++) {
-					float s = samples[bandStart + i];
-					bandEnergy += s * s;
-					count++;
-				}
-				bandEnergy = count > 0 ? bandEnergy / count : 0f;
-				signalBands[b] = bandEnergy;
-				totalEnergy += bandEnergy;
-			}
-
-			float avgEnergy = totalEnergy / numBands;
-
-			// Build/update noise profile from quiet frames
-			if (!_noiseProfileReady) {
-				for (int b = 0; b < numBands; b++)
-					_noiseProfile[b] = (_noiseProfile[b] * _noiseProfileTime + signalBands[b] * Time.deltaTime)
-						/ (_noiseProfileTime + Time.deltaTime);
-				_noiseProfileTime += Time.deltaTime;
-				if (_noiseProfileTime >= 1.0f) // 1 second attack
-					_noiseProfileReady = true;
-			} else if (avgEnergy < Mathf.Max(activationThreshold * 2f, 0.001f)) {
-				// Slowly update noise profile from quiet frames
-				float decay = 0.02f;
-				for (int b = 0; b < numBands; b++)
-					_noiseProfile[b] = _noiseProfile[b] * (1f - decay) + signalBands[b] * decay;
-			}
-
-			if (!_noiseProfileReady) return;
-
-			// Apply spectral subtraction per band (Wiener-like gain)
-			for (int b = 0; b < numBands; b++) {
-				float gain = 1f;
-				if (_noiseProfile[b] > 1e-10f) {
-					float snr = signalBands[b] / _noiseProfile[b];
-					gain = Mathf.Max(0.01f, 1f - strength / Mathf.Max(snr, 0.1f));
-				}
-				int bandStart = b * bandSize;
-				for (int i = 0; i < bandSize && (bandStart + i) < frameSize; i++)
-					samples[bandStart + i] *= gain;
-			}
-		}
-
 		// ── Activation Gate ──
 
-		private bool PassesActivationGate(float[] samples, float threshold) {
-			float sumSq = 0f;
-			for (int i = 0; i < samples.Length; i++)
-				sumSq += samples[i] * samples[i];
-			float rms = Mathf.Sqrt(sumSq / samples.Length);
-
-			if (rms >= threshold) {
+		private bool PassesActivationGate(float threshold) {
+			if (Loudness >= threshold) {
 				_activationHoldTimer = 0.3f;
 				return true;
 			}

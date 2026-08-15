@@ -5,4 +5,5 @@
 	<assembly fullname="Nox.Audio.Runtime" preserve="all" />
 	<assembly fullname="Nox.CCK.Audio" preserve="all" />
 	<assembly fullname="opus" preserve="all" />
+	<assembly fullname="rnnoise" preserve="all" />
 </linker>
