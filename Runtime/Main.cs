@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Nox.CCK.Language;
 using Nox.CCK.Mods.Cores;
+using Nox.CCK.Mods.Events;
 using Nox.CCK.Mods.Initializers;
 using Nox.Controllers;
 using Nox.Settings;
@@ -17,6 +18,7 @@ namespace Nox.Audio.Runtime {
 		static internal ChannelManager ChannelManager;
 		private IAudioSetting[] Settings = Array.Empty<IAudioSetting>();
 		private LanguagePack _lang;
+		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
 		public static ISettingAPI SettingAPI
 			=> CoreAPI.ModAPI
@@ -65,6 +67,11 @@ namespace Nox.Audio.Runtime {
 				SettingAPI.Add(setting);
 
 			MicrophoneManager.Refresh();
+
+			// Subscribe to events.
+			_events = new[] {
+				CoreAPI.EventAPI.Subscribe("mute", OnMuteEvent),
+			};
 		}
 
 		private DateTime _lastUpdate = DateTime.MinValue;
@@ -82,11 +89,15 @@ namespace Nox.Audio.Runtime {
 
 
 		public void OnDisposeMain() {
-			LanguageManager.RemovePack(_lang);
+			foreach (var subscription in _events)
+				CoreAPI.EventAPI.Unsubscribe(subscription);
+			_events = Array.Empty<EventSubscription>();
 
 			foreach (var setting in Settings)
 				SettingAPI.Remove(setting.GetPath());
 			Settings = Array.Empty<IAudioSetting>();
+
+			LanguageManager.RemovePack(_lang);
 
 			ChannelManager.Dispose();
 			MicrophoneManager.Dispose();
@@ -123,6 +134,18 @@ namespace Nox.Audio.Runtime {
 
 		public void UnRegister(string id)
 			=> ChannelManager.UnRegister(id);
+
+		// ── Mute event ────────────────────────────────
+
+		/// <summary>
+		/// Handles the "mute" event by toggling the current microphone's mute state.
+		/// </summary>
+		private void OnMuteEvent(EventData data) {
+			var mic = MicrophoneManager.Current;
+			if (mic == null)
+				return;
+			mic.IsMuted = !mic.IsMuted;
+		}
 
 		// ── ControllerAPI ────────────────────────────
 
