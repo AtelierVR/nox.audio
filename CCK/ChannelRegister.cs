@@ -123,7 +123,7 @@ namespace Nox.CCK.Audio {
 			if (!context.TryGet(0, out IChannelAudio c) || c.Id != _id)
 				return;
 			OnVolume.Invoke(Channel.Volume, Channel.EffectiveVolume);
-			SetVolume(Channel.EffectiveVolume);
+			SetVolume(Channel.IsEffectivelyMuted ? 0f : Channel.EffectiveVolume);
         }
 
 		public void Dispose() {
