@@ -156,7 +156,7 @@ namespace Nox.Audio.Runtime.Channels {
 
 
 		public void Dispose() {
-			foreach (var id in Channels.Keys)
+			foreach (var id in Channels.Keys.ToArray())
 				UnRegister(id, true);
 		}
 	}
