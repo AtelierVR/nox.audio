@@ -30,9 +30,9 @@ namespace Nox.Audio.Players {
 
 		/// <summary>
 		/// The <see cref="ICapturedAudio"/> currently associated with this player's voice.
-		/// For a remote player this is <c>null</c> (playback is handled internally).
 		/// For the local player this is the live microphone source (see <see cref="ILocalPlayerVoice"/>).
-		/// Returns <c>null</c> when no voice is active.
+		/// For a remote player this is its playback, so consumers can read the received
+		/// <see cref="ICapturedAudio.Level"/>. Returns <c>null</c> when no voice is active.
 		/// </summary>
 		ICapturedAudio Audio { get; }
 

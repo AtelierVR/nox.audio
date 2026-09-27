@@ -19,5 +19,11 @@ namespace Nox.Audio.Players {
 		/// Matches Unity's <c>Microphone.GetPosition()</c> when backed by a microphone.
 		/// </summary>
 		int Position { get; }
+
+		/// <summary>
+		/// Current audio level in the <c>0-1</c> range (silence to full scale),
+		/// for UI indicators (speaking ring, nameplate voice image, ...).
+		/// </summary>
+		float Level { get; }
 	}
 }

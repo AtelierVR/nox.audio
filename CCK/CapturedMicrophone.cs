@@ -29,5 +29,9 @@ namespace Nox.CCK.Audio {
 		/// <inheritdoc/>
 		public int Position 
 			=> _microphone.Position;
+
+		/// <inheritdoc/>
+		public float Level
+			=> _microphone?.Loudness ?? 0f;
 	}
 }
