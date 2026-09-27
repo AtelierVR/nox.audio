@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Nox.CCK.Audio.Opus;
 
@@ -15,6 +16,12 @@ namespace Nox.Audio.Runtime.Microphone {
 		private readonly Microphone _mic;
 		private int                 _lastPosition;
 		private readonly MicrophoneProcessor _processor = new();
+
+		/// <summary>Processed frames waiting for a consumer, on the DSP's own frame grid.</summary>
+		private readonly Queue<float[]> _frames = new();
+
+		/// <summary>Frames kept when nobody consumes them (2 s at 50 fps).</summary>
+		private const int MaxQueuedFrames = 100;
 
 		/// <summary>Loudness of the last processed frame (post volume + noise suppression, pre-gate).</summary>
 		public float Loudness
@@ -61,10 +68,30 @@ namespace Nox.Audio.Runtime.Microphone {
 				_processor.Process(buf, _mic); // applies mute/volume/noise-suppression/activation gate in place
 				WriteFrame(clip, start, buf);
 
+				// Publish the frame on the DSP's grid (see TryDequeue).
+				_frames.Enqueue(buf);
+				while (_frames.Count > MaxQueuedFrames)
+					_frames.Dequeue();
+
 				_lastPosition     = (start + frame) % clip.samples;
 				samplesAvailable -= frame;
 			}
 		}
+
+		/// <summary>Takes the next DSP-processed frame, or <c>false</c> when none is pending.</summary>
+		public bool TryDequeue(out float[] samples) {
+			if (_frames.Count == 0) {
+				samples = null;
+				return false;
+			}
+
+			samples = _frames.Dequeue();
+			return true;
+		}
+
+		/// <summary>Drops the frames processed before the caller started consuming.</summary>
+		public void DiscardPending()
+			=> _frames.Clear();
 
 		private static float[] ReadFrame(AudioClip clip, int start, int length) {
 			var buf = new float[length];

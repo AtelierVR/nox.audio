@@ -94,6 +94,20 @@ namespace Nox.Audio.Runtime.Microphone {
 		public float Loudness
 			=> _processor?.Loudness ?? 0f;
 
+		/// <inheritdoc />
+		public bool TryDequeueProcessedFrame(out float[] samples) {
+			if (_processor == null) {
+				samples = null;
+				return false;
+			}
+
+			return _processor.TryDequeue(out samples);
+		}
+
+		/// <inheritdoc />
+		public void DiscardPendingFrames()
+			=> _processor?.DiscardPending();
+
 		public Vector2 Frequencies
 			=> _frequencies;
 
