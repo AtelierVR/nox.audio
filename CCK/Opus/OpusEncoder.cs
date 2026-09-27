@@ -14,6 +14,9 @@ namespace Nox.CCK.Audio.Opus {
 		/// <summary>Maximum Opus bitrate (bps). libopus caps at ~510 kbps.</summary>
 		public const int MaxBitrate = 510000;
 
+		/// <summary>Expected packet loss (percent) declared to the encoder.</summary>
+		public const int DefaultPacketLossPercent = 10;
+
 		public class OpusEncoderInstance : IDisposable {
 			private readonly IOpusEncoder _encoder;
 			private readonly byte[] _buffer;
@@ -29,11 +32,17 @@ namespace Nox.CCK.Audio.Opus {
 			/// <param name="bitrate">Target bitrate in bps.</param>
 			/// <param name="complexity">Opus complexity (0-10).</param>
 			/// <param name="signalType">Signal type hint (auto/voice/music).</param>
-			public OpusEncoderInstance(int sampleRate, int channels, int bitrate, int complexity, OpusSignalType signalType) {
-				_encoder = OpusCodecFactory.CreateEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_AUDIO);
+			/// <param name="packetLossPercent">Expected packet loss (percent); 0 leaves the encoder default.</param>
+			public OpusEncoderInstance(int sampleRate, int channels, int bitrate, int complexity, OpusSignalType signalType, int packetLossPercent = DefaultPacketLossPercent) {
+				// Voice-tuned encoder path, for a 20 ms mono stream over unreliable datagrams.
+				_encoder = OpusCodecFactory.CreateEncoder(sampleRate, channels, OpusApplication.OPUS_APPLICATION_VOIP);
 				_encoder.Bitrate = bitrate;
 				_encoder.Complexity = complexity;
 				_encoder.SignalType = signalType.ToOpusSignal();
+
+				if (packetLossPercent > 0)
+					_encoder.PacketLossPercent = Math.Clamp(packetLossPercent, 0, 100);
+
 				_buffer = new byte[MaxPacketSize];
 			}
 

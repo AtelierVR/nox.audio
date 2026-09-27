@@ -43,6 +43,15 @@ namespace Nox.CCK.Audio.Opus {
 			set => Set("bitrate", value);
 		}
 
+		/// <summary>
+		/// Bitrate ceiling used when <see cref="Bitrate"/> is 0 (auto): the raw MTU budget allows
+		/// ~470 kbps, which is pointless for mono voice and far more likely to be lost.
+		/// </summary>
+		public static int VoiceBitrate {
+			get => Get("voice_bitrate", 48_000);
+			set => Set("voice_bitrate", value);
+		}
+
 		// ── Derived values ──
 		public static int FramePeriodMs => FrameSize;
 		public static int FramesPerSecond => 1000 / FramePeriodMs;
