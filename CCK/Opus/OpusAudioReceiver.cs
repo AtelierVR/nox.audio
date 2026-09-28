@@ -1,15 +1,24 @@
 using System;
+using System.Collections.Generic;
 using Nox.Audio.Players;
 using UnityEngine;
+using Logger = Nox.CCK.Utils.Logger;
 
 namespace Nox.CCK.Audio.Opus {
     /// <summary>
     /// Decodes incoming Opus packets and writes the resulting PCM into a circular
     /// <see cref="AudioClip"/>, mirroring how Unity's Microphone exposes captured
     /// audio. Loop an <see cref="AudioSource"/> on <see cref="Clip"/> to play it back.
-    /// Call <see cref="ReceivePacket"/> whenever a packet arrives from the network,
-    /// and <see cref="Tick"/> once per frame to conceal stalls (dropped packets).
     /// </summary>
+    /// <remarks>
+    /// Datagrams are reordered, duplicated and lost in transit, so frames are handed over with their
+    /// sender frame index (<see cref="ReceiveFrame"/>) and the playout asks for the next slot
+    /// (<see cref="PopFrame"/>, once per frame duration): the buffer restores the sender's order, a
+    /// retransmission is ignored, a frame that never arrives is concealed in its own slot instead of
+    /// delaying every frame after it, and a stream that stops is padded with silence. Its depth is
+    /// bounded (<see cref="Settings.MaxBufferedFrames"/>), beyond which the playout resynchronizes on
+    /// the newest frame rather than growing the latency.
+    /// </remarks>
     public class OpusAudioReceiver : IDisposable, ICapturedAudio {
         public class Settings {
             public int Channels = 1;
@@ -18,11 +27,23 @@ namespace Nox.CCK.Audio.Opus {
             /// <summary>Length of the circular playback buffer, in seconds.</summary>
             public float RingBufferSeconds = 1f;
 
-            /// <summary>Write PLC (concealed) frames when packets stop arriving, instead of letting stale audio loop.</summary>
-            public bool ConcealMissingFrames = true;
+            /// <summary>
+            /// Frames the reorder buffer accepts ahead of the playout, so a burst cannot grow the
+            /// latency; a frame further ahead resynchronizes the timeline instead.
+            /// </summary>
+            public int MaxBufferedFrames = 25;
 
-            /// <summary>Stop concealment (go fully silent) after this long without a real packet.</summary>
-            public float SilenceTimeoutMs = 500f;
+            /// <summary>
+            /// Beyond this long without a frame, a hole comes from the sender's voice gate: write real
+            /// silence and wait for the stream to lock a new timeline.
+            /// </summary>
+            public float ConcealMaxSilenceMs = 150f;
+
+            /// <summary>
+            /// Missing slots in a row concealed with PLC. Beyond that a hole is padded with silence: a
+            /// long PLC tail drones, and the frames in between are lost anyway.
+            /// </summary>
+            public int MaxConcealedFrames = 3;
 
             /// <summary>
             /// Gain applied to the RMS when computing <see cref="Level"/>. The default normalizes a
@@ -34,6 +55,9 @@ namespace Nox.CCK.Audio.Opus {
 
         public AudioClip Clip { get; private set; }
         public int Position => _writePosition;
+
+        /// <summary>Frames received but not played yet: the jitter cushion currently held.</summary>
+        public int BufferedFrames => _pending.Count;
 
         /// <summary>
         /// Level of the frame currently being played by the audio output, in the 0-1 range (silence to
@@ -65,16 +89,28 @@ namespace Nox.CCK.Audio.Opus {
         private readonly int _channels;
         private readonly int _frameSize;       // samples per channel per frame
         private readonly int _maxFrameSize;    // samples per channel of the largest decodable packet (120 ms)
-        private readonly float _frameDurationSeconds;
         private readonly float[] _frameBuffer; // _maxFrameSize * channels
         private readonly float[] _frameLevels; // one level per frame slot of Clip, aligned with it
         private float[] _writeBuffer;          // scratch holding exactly the samples being written
 
         private int _writePosition;
         private int _readPosition = -1;
-        private float _timeSinceLastPacket;
-        private bool _hasReceivedAnyPacket;
         private bool _disposed;
+
+        /// <summary>
+        /// Frames received but not popped yet, keyed by the sender's frame index. A <c>null</c> value is a
+        /// slot the sender announced as silence (empty payload).
+        /// </summary>
+        private readonly Dictionary<int, byte[]> _pending = new();
+
+        /// <summary>Frame index the playout expects next, or -1 while no stream is locked onto.</summary>
+        private int _nextIndex = -1;
+
+        /// <summary>Slots concealed in a row since the last real frame.</summary>
+        private int _concealed;
+
+        /// <summary>Playout slots elapsed since the last received frame.</summary>
+        private int _slotsSinceFrame;
 
         public OpusAudioReceiver(int sampleRate, Settings settings = null, string clipName = "OpusAudioReceiver") {
             _settings = settings ?? new Settings();
@@ -88,7 +124,6 @@ namespace Nox.CCK.Audio.Opus {
             // A single Opus packet may carry up to 120 ms (several frames): size the decode buffer for
             // that maximum so such a packet is decoded instead of being rejected and concealed.
             _maxFrameSize = sampleRate * 120 / 1000;
-            _frameDurationSeconds = _settings.FrameDurationMs / 1000f;
 
             int ringBufferSamples = Mathf.Max(_frameSize, Mathf.CeilToInt(sampleRate * _settings.RingBufferSeconds));
             // Round up to a whole number of frames, purely for tidiness (SetData/GetData wrap fine either way).
@@ -101,9 +136,107 @@ namespace Nox.CCK.Audio.Opus {
             _frameBuffer = new float[_maxFrameSize * _channels];
         }
 
+        // ── Reorder buffer ────────────────────────────────────────────────────
+
         /// <summary>
-        /// Decode one received Opus packet and write it into the ring buffer.
-        /// Call this from your network receive callback.
+        /// Hands a frame received from the network to the playout buffer. Frames are ordered by
+        /// <paramref name="frameIndex"/> — datagrams arrive out of order, and the same index twice (a
+        /// retransmission, or a broadcast to several listeners) is ignored — and an empty payload marks
+        /// the slot as silence, so the index stays continuous and a silence never looks like a loss.
+        /// <see cref="PopFrame"/> then plays them in the sender's order.
+        /// </summary>
+        public void ReceiveFrame(int frameIndex, byte[] opusData) {
+            if (_disposed) return;
+
+            // An empty payload is a frame the sender announced as silence: it still holds its slot.
+            var sample = opusData is { Length: > 0 } ? opusData : null;
+
+            _slotsSinceFrame = 0;
+
+            if (_nextIndex < 0) {
+                // First frame of a stream, or of a stream that resumed after a stall: lock onto it.
+                _pending.Clear();
+                _nextIndex = frameIndex;
+            } else if (frameIndex < _nextIndex) {
+                // Its slot is already behind the playout: a duplicate, or a packet that arrived too late.
+                return;
+            } else if (frameIndex - _nextIndex >= _settings.MaxBufferedFrames) {
+                // Too far ahead to keep waiting for the frames in between: resync onto this one.
+                Logger.LogDebug(
+                    $"{nameof(OpusAudioReceiver)} jumped {frameIndex - _nextIndex} frames, resyncing.",
+                    tag: nameof(OpusAudioReceiver)
+                );
+                _pending.Clear();
+                _nextIndex = frameIndex;
+            }
+
+            _pending[frameIndex] = sample;
+        }
+
+        /// <summary>
+        /// Writes the frame the sender's timeline expects next into the ring: the buffered one, a concealed
+        /// (PLC) frame while the stream is merely late, or real silence when the slot is lost beyond repair
+        /// or the stream stopped (so nothing stale keeps looping). Call it once per frame duration.
+        /// </summary>
+        public void PopFrame() {
+            if (_disposed) return;
+
+            // No stream locked (nothing received yet, or it stopped): keep the ring fed with silence.
+            if (_nextIndex < 0) {
+                ReceiveSilence();
+                return;
+            }
+
+            _slotsSinceFrame++;
+
+            if (_pending.Remove(_nextIndex, out var packet)) {
+                if (packet != null)
+                    ReceivePacket(packet);
+                else
+                    ReceiveSilence();
+
+                _nextIndex++;
+                _concealed = 0;
+                return;
+            }
+
+            if (_slotsSinceFrame * _settings.FrameDurationMs > _settings.ConcealMaxSilenceMs) {
+                // The stream stopped: write silence and wait for it to lock onto a new timeline.
+                ReceiveSilence();
+                _nextIndex = -1;
+                _concealed = 0;
+                return;
+            }
+
+            if (_concealed < _settings.MaxConcealedFrames) {
+                // The frame is late or lost: conceal its slot and move on. A packet arriving afterwards is
+                // dropped as already played, which keeps the rest of the stream in order.
+                ReceiveConcealedFrame();
+                _nextIndex++;
+                _concealed++;
+                return;
+            }
+
+            // Hole too deep to conceal: pad it with silence so the playout keeps its pace.
+            ReceiveSilence();
+            _nextIndex++;
+        }
+
+        /// <summary>
+        /// Forgets the timeline and everything buffered for it: the next received frame locks a new one.
+        /// </summary>
+        public void ResetTimeline() {
+            _pending.Clear();
+            _nextIndex       = -1;
+            _concealed       = 0;
+            _slotsSinceFrame = 0;
+        }
+
+        // ── Ring buffer ───────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Decode one Opus packet and write it into the ring buffer, in arrival order. Prefer
+        /// <see cref="ReceiveFrame"/> when the sender numbers its frames: this one cannot reorder.
         /// </summary>
         public void ReceivePacket(byte[] opusData) {
             if (_disposed) throw new ObjectDisposedException(nameof(OpusAudioReceiver));
@@ -113,8 +246,6 @@ namespace Nox.CCK.Audio.Opus {
             if (samplesDecoded <= 0) return;
 
             WriteFrame(samplesDecoded);
-            _hasReceivedAnyPacket = true;
-            _timeSinceLastPacket = 0f;
         }
 
         /// <summary>
@@ -134,27 +265,6 @@ namespace Nox.CCK.Audio.Opus {
 
             Array.Clear(_frameBuffer, 0, _frameBuffer.Length);
             WriteFrame(_frameSize);
-        }
-
-        /// <summary>
-        /// Call once per frame (e.g. from MonoBehaviour.Update) so a stalled stream
-        /// gets concealed (PLC) instead of the AudioClip looping stale audio forever.
-        /// </summary>
-        /// <param name="deltaTime">Elapsed time in seconds since the last Tick.</param>
-        public void Tick(float deltaTime) {
-            if (_disposed || !_hasReceivedAnyPacket) return;
-
-            _timeSinceLastPacket += deltaTime;
-
-            if (_timeSinceLastPacket * 1000f > _settings.SilenceTimeoutMs) return; // fully idle, stop concealing
-            if (!_settings.ConcealMissingFrames) return;
-            if (_timeSinceLastPacket < _frameDurationSeconds) return; // not due for a frame yet
-
-            int concealed = _decoder.DecodeLost(_frameSize, _frameBuffer);
-            if (concealed <= 0) return;
-
-            WriteFrame(concealed);
-            _timeSinceLastPacket -= _frameDurationSeconds;
         }
 
         /// <summary>
@@ -196,6 +306,7 @@ namespace Nox.CCK.Audio.Opus {
             if (_disposed) return;
             _disposed = true;
             _decoder?.Dispose();
+            _pending.Clear();
 
             if (Clip != null) {
                 UnityEngine.Object.Destroy(Clip);
