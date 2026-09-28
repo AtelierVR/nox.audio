@@ -156,7 +156,7 @@ namespace Nox.Audio.Runtime.Microphone {
 		public readonly UnityEvent<float> OnActivationChanged = new();
 
 		public float Activation {
-			get => Config.Load().Get(GetSetting("activation"), .2f);
+			get => Config.Load().Get(GetSetting("activation"), .05f);
 			set {
 				var old = Activation;
 				var val = Mathf.Clamp(value, 0f, 1f);
