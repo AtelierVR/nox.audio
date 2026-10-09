@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace Nox.Audio.Runtime {
 	public sealed class CurrentSetting : DropdownHandler, IAudioSetting {
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "audio", "microphone", "current" };
 
-		public override int GetOrder()
-			=> 1;
+		public override int Order
+			=> 40001;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/dropdown.prefab");
@@ -19,7 +19,7 @@ namespace Nox.Audio.Runtime {
 			=> Main.UiAPI.MakeModal(menu);
 
 		public CurrentSetting() {
-			SetLabel($"settings.entry.{string.Join(".", GetPath())}.label");
+			SetLabel($"settings.entry.{string.Join(".", Path)}.label");
 			SetOptions(GetOptions());
 			SetValue(Main.MicrophoneManager.CurrentName, false);
 		}

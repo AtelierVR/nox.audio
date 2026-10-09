@@ -15,10 +15,10 @@ namespace Nox.Audio.Runtime.Channels {
 		private readonly ChannelAudio _channel;
 		private Toggle _toggle;
 
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "audio", "channel", _channel.Id };
 
-		public override int GetOrder()
+		public override int Order
 			=> _channel.Priority;
 
 		override protected GameObject GetPrefab()

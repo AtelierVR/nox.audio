@@ -94,7 +94,7 @@ namespace Nox.Audio.Runtime {
 			_events = Array.Empty<EventSubscription>();
 
 			foreach (var setting in Settings)
-				SettingAPI.Remove(setting.GetPath());
+				SettingAPI.Remove(setting.Path);
 			Settings = Array.Empty<IAudioSetting>();
 
 			LanguageManager.RemovePack(_lang);

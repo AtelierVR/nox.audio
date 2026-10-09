@@ -12,11 +12,11 @@ namespace Nox.Audio.Runtime {
 	public sealed class VolumeSetting : RangeHandler, IAudioSetting {
 		private Toggle _toggle;
 
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "audio", "microphone", "volume" };
 
-		public override int GetOrder()
-			=> 1;
+		public override int Order
+			=> 40001;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/volume.prefab");
@@ -25,7 +25,7 @@ namespace Nox.Audio.Runtime {
 			SetRange(0f, 2f);
 			SetStep(0.001f);
 
-			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
+			SetLabelKey($"settings.entry.{string.Join(".", Path)}.label");
 			SetValueKey("settings.range.value.percent");
 
 			Main.MicrophoneManager.OnCurrentChanged.AddListener(UpdateCurrent);

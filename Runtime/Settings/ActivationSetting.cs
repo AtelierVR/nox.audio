@@ -6,17 +6,17 @@ using UnityEngine.UI;
 
 namespace Nox.Audio.Runtime {
 	public sealed class ActivationSetting : RangeHandler, IAudioSetting {
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "audio", "microphone", "activation" };
 
-		public override int GetOrder()
-			=> 1;
+		public override int Order
+			=> 40001;
 
 		public ActivationSetting() {
 			SetRange(0f, 1f);
 			SetStep(0.001f);
 
-			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
+			SetLabelKey($"settings.entry.{string.Join(".", Path)}.label");
 			SetValueKey("settings.range.value.percent");
 
 			Main.MicrophoneManager.OnCurrentChanged.AddListener(UpdateCurrent);

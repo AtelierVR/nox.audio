@@ -137,7 +137,7 @@ namespace Nox.Audio.Runtime.Channels {
 
 			// Remove dynamic settings
 			var settings = Main.SettingAPI;
-			settings.Remove(channel.Item2.GetPath());
+			settings.Remove(channel.Item2.Path);
 
 			Channels.Remove(id);
 

@@ -10,18 +10,18 @@ namespace Nox.Audio.Runtime {
 		public const float NORMAL = 0.6f;
 		public const float DISABLED = 0f;
 
-		public override string[] GetPath()
+		public override string[] Path
 			=> new[] { "audio", "microphone", "noise_suppression" };
 
-		public override int GetOrder()
-			=> 1;
+		public override int Order
+			=> 40001;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");
 
 		public NoiseSuppressionSetting() {
 			SetValue(Value, notify: false);
-			SetLabelKey($"settings.entry.{string.Join(".", GetPath())}.label");
+			SetLabelKey($"settings.entry.{string.Join(".", Path)}.label");
 
 			Main.MicrophoneManager.OnCurrentChanged.AddListener(UpdateCurrent);
 			UpdateCurrent(Main.MicrophoneManager.Current);
