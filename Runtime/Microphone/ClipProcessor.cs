@@ -23,6 +23,15 @@ namespace Nox.Audio.Runtime.Microphone {
 		/// <summary>Frames kept when nobody consumes them (2 s at 50 fps).</summary>
 		private const int MaxQueuedFrames = 100;
 
+		/// <summary>
+		/// Upper bound on the frames drained in a single update. After a stall (load hitch, domain
+		/// reload, …) the clip can hold seconds of backlog; draining it in one frame used to turn a
+		/// small hitch into a huge one — one profiler capture showed ~580 frames of noise
+		/// suppression inside a single 342 ms frame. The excess is dropped instead of queued: a short
+		/// gap in the microphone stream is far cheaper than a multi-frame stall.
+		/// </summary>
+		private const int MaxFramesPerUpdate = 8;
+
 		/// <summary>Loudness of the last processed frame (post volume + noise suppression, pre-gate).</summary>
 		public float Loudness
 			=> _processor.Loudness;
@@ -62,6 +71,7 @@ namespace Nox.Audio.Runtime.Microphone {
 			// Process in frames sized to the configured frame period, scaled to the
 			// actual recording rate, to keep the activation gate responsive.
 			int frame = Mathf.Max(1, Mathf.RoundToInt(clip.frequency * OpusConfig.SecondsPerFrame));
+			var processed = 0;
 			while (samplesAvailable >= frame) {
 				int start = _lastPosition % clip.samples;
 				var buf  = ReadFrame(clip, start, frame);
@@ -75,6 +85,13 @@ namespace Nox.Audio.Runtime.Microphone {
 
 				_lastPosition     = (start + frame) % clip.samples;
 				samplesAvailable -= frame;
+
+				if (++processed >= MaxFramesPerUpdate) {
+					// Resynchronise on the frame grid at the record head and drop the rest of the
+					// backlog, so the work per update stays bounded instead of growing every frame.
+					_lastPosition = pos - pos % frame;
+					break;
+				}
 			}
 		}
 
