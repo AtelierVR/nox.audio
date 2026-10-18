@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Nox.CCK.Utils;
 using UnityEngine.Events;
-using Logger = Nox.CCK.Utils.Logger;
 using UnityMicrophone = UnityEngine.Microphone;
 
 namespace Nox.Audio.Runtime.Microphone {

@@ -1,9 +1,16 @@
+using System.Collections.Generic;
+
 namespace Nox.Audio {
 	/// <summary>
 	/// Public API for managing volume audio channels.
 	/// Implemented by the nox.audio runtime.
 	/// </summary>
 	public interface IAudioAPI {
+		/// <summary>
+		/// All channels currently registered.
+		/// </summary>
+		IEnumerable<IChannelAudio> Channels { get; }
+
 		/// <summary>
 		/// Register a new volume audio channel.
 		/// Returns the created <see cref="IChannelAudio"/> instance.
@@ -16,5 +23,11 @@ namespace Nox.Audio {
 		/// If no listener cancels the request, the channel is removed.
 		/// </summary>
 		void UnRegister(string id);
+
+		/// <summary>
+		/// Get a registered channel by id (e.g. <c>"voice"</c>), or <c>null</c> when it is not
+		/// registered yet (mod not loaded, no session).
+		/// </summary>
+		IChannelAudio GetChannel(string id);
 	}
 }

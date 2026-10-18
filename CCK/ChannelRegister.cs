@@ -57,10 +57,8 @@ namespace Nox.CCK.Audio {
 
 			// Load the mixer asset (256 tracks "00".."FF") and hand this channel a
 			// dedicated track so every AudioSource routed to it mixes independently.
-			Mixer = coreAPI.AssetAPI.GetAsset<AudioMixer>("audio:mixer.mixer");
-			int track = _nextTrack++ & 0xFF;
-			MixerGroup = GetTrack(track);
-			VolumeParam = $"Volume_{track:X2}";
+			_track  = _nextTrack++ & 0xFF;
+			VolumeParam = $"Volume_{_track:X2}";
 
 			_subscriptions = new[] {
 				coreAPI.EventAPI.Subscribe("audio.channel.remove_requested", OnRemoveRequested),
@@ -69,27 +67,67 @@ namespace Nox.CCK.Audio {
 			};
 
 			// Apply the initial channel volume/mute to the mixer track.
+			Apply();
+		}
+
+		/// <summary>Asset path of the shared mixer (256 tracks "00".."FF").</summary>
+		private const string MixerAsset = "audio:mixer.mixer";
+
+		/// <summary>Track index handed to this register, kept to resolve the group lazily.</summary>
+		private readonly int _track;
+
+		/// <summary>
+		/// Re-applies the current channel state to this register's mixer track. Called on construction,
+		/// on every volume/mute change, and by consumers when they (re)route their sources: the track
+		/// value can be lost when the mixer asset is reloaded with the mods' bundles, which would leave
+		/// the audio at the mixer default instead of the channel volume.
+		/// </summary>
+		public void Apply() {
+			EnsureMixer();
 			SetVolume(Channel.IsEffectivelyMuted ? 0f : Channel.EffectiveVolume);
 		}
 
 		/// <summary>
+		/// Resolves the mixer and this register's track. Throws when the mixer asset or the track is not
+		/// available: a channel that cannot be routed must fail here instead of playing at full volume.
+		/// </summary>
+		private void EnsureMixer() {
+			if (Mixer == null)
+				Mixer = _coreAPI.AssetAPI.GetAsset<AudioMixer>(MixerAsset);
+
+			if (Mixer == null)
+				throw new InvalidOperationException(
+					$"ChannelRegister: mixer '{MixerAsset}' not available, cannot route channel '{_id}'."
+				);
+
+			if (MixerGroup == null)
+				MixerGroup = GetTrack(_track);
+
+			if (MixerGroup == null)
+				throw new InvalidOperationException(
+					$"ChannelRegister: mixer track '{_track:X2}' not found, cannot route channel '{_id}'."
+				);
+		}
+
+		/// <summary>
 		/// Get the <see cref="AudioMixerGroup"/> for a track index (0..255, i.e. "00".."FF").
-		/// Returns null if the mixer is unavailable or the index is out of range.
+		/// Throws when the mixer is missing or the index is out of range.
 		/// </summary>
 		public AudioMixerGroup GetTrack(int index) {
-			if (Mixer == null || index < 0 || index > 255)
-				return null;
+			if (Mixer == null)
+				throw new InvalidOperationException($"ChannelRegister: mixer '{MixerAsset}' not available, cannot resolve track '{index:X2}'.");
+
+			if (index < 0 || index > 255)
+				throw new ArgumentOutOfRangeException(nameof(index), index, "Mixer tracks are '00'..'FF'.");
+
 			return Mixer.FindMatchingGroups($"{index:X2}")[0];
 		}
 
 		/// <summary>
-		/// Set this channel's mixer-track volume. <paramref name="linear"/> is a
-		/// [0..1] linear amplitude; 0 mute. Does nothing if no mixer/param available.
+		/// Set this channel's mixer-track volume. <paramref name="linear"/> is a [0..1] linear amplitude;
+		/// 0 mutes. Requires a mixer, which <see cref="Apply"/> guarantees.
 		/// </summary>
-		public void SetVolume(float linear) {
-			if (Mixer == null || string.IsNullOrEmpty(VolumeParam))
-				return;
-
+		private void SetVolume(float linear) {
 			float decibels = linear > 0f ? 20f * Mathf.Log10(linear) : -80f;
 			Mixer.SetFloat(VolumeParam, Mathf.Clamp(decibels, -80f, 0f));
 		}
@@ -116,14 +154,14 @@ namespace Nox.CCK.Audio {
 			if (!context.TryGet(0, out IChannelAudio c) || c.Id != _id)
 				return;
 			OnMute.Invoke(Channel.IsMuted, Channel.IsEffectivelyMuted);
-			SetVolume(Channel.IsEffectivelyMuted ? 0f : Channel.EffectiveVolume);
+			Apply();
         }
 
         private void OnVolumeChanged(EventData context) {
 			if (!context.TryGet(0, out IChannelAudio c) || c.Id != _id)
 				return;
 			OnVolume.Invoke(Channel.Volume, Channel.EffectiveVolume);
-			SetVolume(Channel.IsEffectivelyMuted ? 0f : Channel.EffectiveVolume);
+			Apply();
         }
 
 		public void Dispose() {

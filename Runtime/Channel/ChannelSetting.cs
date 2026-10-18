@@ -1,3 +1,6 @@
+using System;
+using Nox.CCK.Audio;
+using Nox.CCK.Mods.Events;
 using Nox.CCK.Settings;
 using Nox.CCK.Utils;
 using Nox.Settings;
@@ -14,6 +17,7 @@ namespace Nox.Audio.Runtime.Channels {
 	public sealed class ChannelSetting : RangeHandler, IAudioSetting {
 		private readonly ChannelAudio _channel;
 		private Toggle _toggle;
+		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
 		public override string[] Path
 			=> new[] { "audio", "channel", _channel.Id };
@@ -39,8 +43,13 @@ namespace Nox.Audio.Runtime.Channels {
 			// Set up mute toggle from the combined prefab
 			_toggle = Reference.GetComponent<Toggle>("toggle", go);
 			_toggle.onValueChanged.AddListener(OnToggleChanged);
-			_toggle.SetIsOnWithoutNotify(_channel.IsMuted);
-			UpdateMuteType();
+
+			// A parent may be muted/unmuted: our effective state follows it, so the row must too.
+			_events = new[] {
+				Main.CoreAPI.EventAPI.Subscribe("audio.channel.mute_changed", OnChannelMuteChanged)
+			};
+
+			Refresh();
 
 			return go;
 		}
@@ -50,12 +59,31 @@ namespace Nox.Audio.Runtime.Channels {
 			UpdateMuteType();
 		}
 
+		/// <summary>
+		/// Any channel may be one of our parents: recompute the row instead of tracking the chain here
+		/// (<see cref="ChannelAudio.IsEffectivelyMuted"/> already walks it).
+		/// </summary>
+		private void OnChannelMuteChanged(EventData context) {
+			if (!context.TryGet<IChannelAudio>(0, out var channel) || channel == null)
+				return;
+
+			Refresh();
+		}
+
+		/// <summary>Re-reads the channel states into the row (silent: the toggle is not a user input).</summary>
+		private void Refresh() {
+			if (_toggle != null)
+				_toggle.SetIsOnWithoutNotify(_channel.IsMuted);
+
+			UpdateMuteType();
+		}
+
 		public override void OnUpdated(IHandler handler)
 			=> UpdateMuteType();
 
 		private void UpdateMuteType() 
 			=> SetTypeKey(
-				_channel.IsEffectivelyMuted
+				_channel.IsSilent()
 					? "mute.active"
 					: "settings.range.type.empty"
 			);
@@ -65,7 +93,12 @@ namespace Nox.Audio.Runtime.Channels {
 
 		override protected void OnDestroy() {
 			base.OnDestroy();
-			_toggle.onValueChanged.RemoveListener(OnToggleChanged);
+
+			foreach (var subscription in _events)
+				Main.CoreAPI?.EventAPI.Unsubscribe(subscription);
+			_events = Array.Empty<EventSubscription>();
+
+			_toggle?.onValueChanged.RemoveListener(OnToggleChanged);
 			_toggle = null;
 		}
 

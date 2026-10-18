@@ -1,3 +1,6 @@
+using System;
+using Nox.CCK.Audio;
+using Nox.CCK.Mods.Events;
 using Nox.CCK.Settings;
 using Nox.CCK.Utils;
 using Nox.UI;
@@ -11,6 +14,7 @@ namespace Nox.Audio.Runtime {
 	/// </summary>
 	public sealed class VolumeSetting : RangeHandler, IAudioSetting {
 		private Toggle _toggle;
+		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
 		public override string[] Path
 			=> new[] { "audio", "microphone", "volume" };
@@ -38,8 +42,14 @@ namespace Nox.Audio.Runtime {
 			// Set up mute toggle from the combined prefab
 			_toggle = Reference.GetComponent<Toggle>("toggle", go);
 			_toggle.onValueChanged.AddListener(OnToggleChanged);
-			_toggle.SetIsOnWithoutNotify(Main.MicrophoneManager.Current.IsMuted);
-			UpdateMuteType();
+
+			// The device may be muted (or silenced by its volume) from any UI or by the mute key.
+			_events = new[] {
+				Main.CoreAPI.EventAPI.Subscribe("audio.microphone.mute_changed", OnMicrophoneChanged),
+				Main.CoreAPI.EventAPI.Subscribe("audio.microphone.volume_changed", OnMicrophoneChanged)
+			};
+
+			Refresh();
 
 			return go;
 		}
@@ -49,8 +59,21 @@ namespace Nox.Audio.Runtime {
 			UpdateMuteType();
 		}
 
+		private void OnMicrophoneChanged(EventData context)
+			=> Refresh();
+
+		/// <summary>Re-reads the device state into the row (silent: the toggle is not a user input).</summary>
+		private void Refresh() {
+			_toggle?.SetIsOnWithoutNotify(Main.MicrophoneManager.Current.IsMuted);
+			UpdateMuteType();
+		}
+
+		/// <summary>
+		/// A muted device shows "muted", and so does a device at volume 0: it captures nothing, which
+		/// is what a mute does (<see cref="MicrophoneExtensions.IsSilent"/>).
+		/// </summary>
 		private void UpdateMuteType() {
-			SetTypeKey(Main.MicrophoneManager.Current.IsMuted
+			SetTypeKey(Main.MicrophoneManager.Current.IsSilent()
 				? "mute.active"
 				: "settings.range.type.empty");
 		}
@@ -60,8 +83,7 @@ namespace Nox.Audio.Runtime {
 
 		private void UpdateCurrent(Microphone.Microphone arg0) {
 			SetValue(Main.MicrophoneManager.Current.Volume, notify: false);
-			_toggle?.SetIsOnWithoutNotify(Main.MicrophoneManager.Current.IsMuted);
-			UpdateMuteType();
+			Refresh();
 		}
 
 		override protected void OnValueChanged(float value)
@@ -69,7 +91,12 @@ namespace Nox.Audio.Runtime {
 
 		override protected void OnDestroy() {
 			base.OnDestroy();
-			_toggle.onValueChanged.RemoveListener(OnToggleChanged);
+
+			foreach (var subscription in _events)
+				Main.CoreAPI?.EventAPI.Unsubscribe(subscription);
+			_events = Array.Empty<EventSubscription>();
+
+			_toggle?.onValueChanged.RemoveListener(OnToggleChanged);
 			_toggle = null;
 		}
 	}

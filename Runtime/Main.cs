@@ -70,7 +70,7 @@ namespace Nox.Audio.Runtime {
 
 			// Subscribe to events.
 			_events = new[] {
-				CoreAPI.EventAPI.Subscribe("mute", OnMuteEvent),
+				CoreAPI.EventAPI.Subscribe("mute", OnMuteEvent)
 			};
 		}
 
@@ -115,7 +115,7 @@ namespace Nox.Audio.Runtime {
 		public IMicrophone Default
 			=> MicrophoneManager.Default;
 
-		public IEnumerable<IMicrophone> All
+		public IEnumerable<IMicrophone> Microphones
 			=> MicrophoneManager.Microphones
 				.Cast<IMicrophone>()
 				.ToArray();
@@ -123,7 +123,7 @@ namespace Nox.Audio.Runtime {
 		public IMicrophone Current
 			=> MicrophoneManager.Current;
 
-		public IMicrophone Get(string name)
+		public IMicrophone GetMicrophone(string name)
 			=> MicrophoneManager.Microphones
 				.FirstOrDefault(m => m.Name == name);
 
@@ -135,7 +135,15 @@ namespace Nox.Audio.Runtime {
 		public void UnRegister(string id)
 			=> ChannelManager.UnRegister(id);
 
-		// ── Mute event ────────────────────────────────
+		public IChannelAudio GetChannel(string id)
+			=> ChannelManager.Get(id);
+
+		public IEnumerable<IChannelAudio> Channels
+			=> ChannelManager.Channels
+				.Select(kvp => kvp.Value.Item1)
+				.ToArray();
+
+		// ── Mute event ───────────────────────────────
 
 		/// <summary>
 		/// Handles the "mute" event by toggling the current microphone's mute state.

@@ -4,10 +4,10 @@ namespace Nox.Audio {
 	public interface IMicrophoneAPI {
 		public IMicrophone Default { get; }
 
-		public IEnumerable<IMicrophone> All { get; }
+		public IEnumerable<IMicrophone> Microphones { get; }
 
 		public IMicrophone Current { get; }
 
-		public IMicrophone Get(string name);
+		public IMicrophone GetMicrophone(string name);
 	}
 }

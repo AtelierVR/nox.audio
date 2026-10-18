@@ -1,3 +1,5 @@
+using Nox.CCK.Events;
+
 namespace Nox.Audio.Players {
 	/// <summary>
 	/// Voice info exposed by every player (local and remote).
@@ -64,5 +66,23 @@ namespace Nox.Audio.Players {
 		/// Effective mute state, considering the channel hierarchy.
 		/// </summary>
 		bool IsEffectivelyMuted { get; }
+
+		/// <summary>
+		/// Whether this player's own microphone is muted (self-mute), as announced to the room.
+		/// For a remote player this is the state its owner published.
+		/// </summary>
+		bool IsSelfMuted { get; }
+
+		/// <summary>
+		/// Whether this player is deafened (hears nobody), as announced to the room.
+		/// For a remote player this is the state its owner published.
+		/// </summary>
+		bool IsDeafened { get; }
+
+		/// <summary>Raised when <see cref="IsSelfMuted"/> changes.</summary>
+		NoxEvent<bool> OnSelfMuteChanged { get; }
+
+		/// <summary>Raised when <see cref="IsDeafened"/> changes.</summary>
+		NoxEvent<bool> OnDeafenChanged { get; }
 	}
 }
