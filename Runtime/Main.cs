@@ -80,6 +80,8 @@ namespace Nox.Audio.Runtime {
 			// Per-frame: drive the microphone DSP (activation gate, etc.).
 			MicrophoneManager?.Update();
 
+			ChannelManager?.Update();
+
 			// Throttled: refresh the device list (hot-plug detection).
 			if ((DateTime.Now - _lastUpdate).TotalSeconds < 5)
 				return;

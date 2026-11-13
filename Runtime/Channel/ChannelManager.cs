@@ -118,6 +118,15 @@ namespace Nox.Audio.Runtime.Channels {
 				? existing.Item1
 				: null;
 
+		public void Update() {
+			if (!SystemAudio.Update())
+				return;
+
+			foreach (var kvp in Channels)
+				if (kvp.Value.Item1.Depends.Length == 0)
+					kvp.Value.Item1.OnMuteChanged();
+		}
+
 		/// <summary>
 		/// Request to unregister a channel. Emits <see cref="OnRequestUnregister"/>
 		/// so listeners can cancel. If not cancelled, removes the channel and its settings.
@@ -158,6 +167,8 @@ namespace Nox.Audio.Runtime.Channels {
 		public void Dispose() {
 			foreach (var id in Channels.Keys.ToArray())
 				UnRegister(id, true);
+
+			SystemAudio.Shutdown();
 		}
 	}
 }
