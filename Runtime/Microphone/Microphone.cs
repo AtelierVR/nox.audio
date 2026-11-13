@@ -1,10 +1,7 @@
-using Nox.Audio;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityMicrophone = UnityEngine.Microphone;
-using Nox.CCK;
 using Nox.CCK.Utils;
 using UnityEngine.Events;
 
@@ -17,10 +14,11 @@ namespace Nox.Audio.Runtime.Microphone {
 		private ClipProcessor _processor;
 
 		public Microphone(MicrophoneManager manager, string name, int index, int minFrequency, int maxFrequency) {
-			_manager     = manager;
-			Name         = name;
+			_manager = manager;
+			Name = name;
 			_frequencies = new Vector2(minFrequency, maxFrequency);
-			_usedBy      = new List<string>();
+			_usedBy = new List<string>();
+			_settingPath = new[] { "settings", "microphones", name, null };
 		}
 
 		public string[] UsedBy
@@ -111,26 +109,34 @@ namespace Nox.Audio.Runtime.Microphone {
 		public Vector2 Frequencies
 			=> _frequencies;
 
-		private string[] GetSetting(string sub)
-			=> new[] {
-				"settings",
-				"microphones",
-				Name,
-				sub
-			};
+		private const string VolumeKey = "volume";
+		private const string MuteKey = "mute";
+		private const string ActivationKey = "activation";
+		private const string NoiseSuppressionKey = "noise_suppression";
 
+		/// <summary>
+		/// Config path of this microphone, <c>settings.microphones.&lt;name&gt;.&lt;key&gt;</c>, allocated once in the
+		/// constructor. Only the last segment changes, so the getters (read every frame by the DSP) never
+		/// allocate: a fresh <c>string[]</c> per read was the bulk of their allocations.
+		/// </summary>
+		private readonly string[] _settingPath;
+
+		private string[] SettingPath(string key) {
+			_settingPath[3] = key;
+			return _settingPath;
+		}
 
 		public readonly UnityEvent<float> OnVolumeChanged = new();
 
 		public float Volume {
-			get => Config.Load().Get(GetSetting("volume"), 1f);
+			get => Config.Load().Get(SettingPath(VolumeKey), 1f);
 			set {
 				var old = Volume;
 				var val = Mathf.Clamp(value, 0f, 2f);
 				if (Mathf.Approximately(old, val))
 					return;
 				var config = Config.Load();
-				config.Set(GetSetting("volume"), val);
+				config.Set(SettingPath(VolumeKey), val);
 				config.Save();
 				OnVolumeChanged.Invoke(val);
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.volume_changed", this, val, old);
@@ -140,13 +146,13 @@ namespace Nox.Audio.Runtime.Microphone {
 		public readonly UnityEvent<bool> OnMuteChanged = new();
 
 		public bool IsMuted {
-			get => Config.Load().Get(GetSetting("mute"), false);
+			get => Config.Load().Get(SettingPath(MuteKey), false);
 			set {
 				var old = IsMuted;
 				if (old == value)
 					return;
 				var config = Config.Load();
-				config.Set(GetSetting("mute"), value);
+				config.Set(SettingPath(MuteKey), value);
 				config.Save();
 				OnMuteChanged.Invoke(value);
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.mute_changed", this, value);
@@ -156,14 +162,14 @@ namespace Nox.Audio.Runtime.Microphone {
 		public readonly UnityEvent<float> OnActivationChanged = new();
 
 		public float Activation {
-			get => Config.Load().Get(GetSetting("activation"), .05f);
+			get => Config.Load().Get(SettingPath(ActivationKey), .05f);
 			set {
 				var old = Activation;
 				var val = Mathf.Clamp(value, 0f, 1f);
 				if (Mathf.Approximately(old, val))
 					return;
 				var config = Config.Load();
-				config.Set(GetSetting("activation"), val);
+				config.Set(SettingPath(ActivationKey), val);
 				config.Save();
 				OnActivationChanged.Invoke(val);
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.activation_changed", this, val, old);
@@ -173,14 +179,14 @@ namespace Nox.Audio.Runtime.Microphone {
 		public readonly UnityEvent<float> OnNoiseSuppressionChanged = new();
 
 		public float NoiseSuppression {
-			get => Config.Load().Get(GetSetting("noise_suppression"), .6f);
+			get => Config.Load().Get(SettingPath(NoiseSuppressionKey), .6f);
 			set {
 				var old = NoiseSuppression;
 				var val = Mathf.Clamp(value, 0f, 1f);
 				if (Mathf.Approximately(old, val))
 					return;
 				var config = Config.Load();
-				config.Set(GetSetting("noise_suppression"), val);
+				config.Set(SettingPath(NoiseSuppressionKey), val);
 				config.Save();
 				OnNoiseSuppressionChanged.Invoke(val);
 				Main.CoreAPI.EventAPI.Emit("audio.microphone.noise_suppression_changed", this, val, old);
