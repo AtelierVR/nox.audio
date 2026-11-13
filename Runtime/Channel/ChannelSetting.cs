@@ -6,7 +6,6 @@ using Nox.CCK.Utils;
 using Nox.Settings;
 using Nox.UI;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Nox.Audio.Runtime.Channels {
 	/// <summary>
@@ -16,7 +15,7 @@ namespace Nox.Audio.Runtime.Channels {
 	/// </summary>
 	public sealed class ChannelSetting : RangeHandler, IAudioSetting {
 		private readonly ChannelAudio _channel;
-		private Toggle _toggle;
+		private ToggleField _field;
 		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
 		public override string[] Path
@@ -40,9 +39,11 @@ namespace Nox.Audio.Runtime.Channels {
 		public override GameObject GetContent(RectTransform transform, IMenu menu) {
 			var go = base.GetContent(transform, menu);
 
-			// Set up mute toggle from the combined prefab
-			_toggle = Reference.GetComponent<Toggle>("toggle", go);
-			_toggle.onValueChanged.AddListener(OnToggleChanged);
+			_field = go.GetOrAddComponent<ToggleField>();
+			_field.prefab = Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");
+			_field.keepLabel = false;
+			_field.Build();
+			_field.OnValueChanged.AddListener(OnToggleChanged);
 
 			// A parent may be muted/unmuted: our effective state follows it, so the row must too.
 			_events = new[] {
@@ -72,8 +73,7 @@ namespace Nox.Audio.Runtime.Channels {
 
 		/// <summary>Re-reads the channel states into the row (silent: the toggle is not a user input).</summary>
 		private void Refresh() {
-			if (_toggle != null)
-				_toggle.SetIsOnWithoutNotify(_channel.IsMuted);
+			_field?.SetValue(_channel.IsMuted);
 
 			UpdateMuteType();
 		}
@@ -81,7 +81,7 @@ namespace Nox.Audio.Runtime.Channels {
 		public override void OnUpdated(IHandler handler)
 			=> UpdateMuteType();
 
-		private void UpdateMuteType() 
+		private void UpdateMuteType()
 			=> SetTypeKey(
 				_channel.IsSilent()
 					? "mute.active"
@@ -98,8 +98,10 @@ namespace Nox.Audio.Runtime.Channels {
 				Main.CoreAPI?.EventAPI.Unsubscribe(subscription);
 			_events = Array.Empty<EventSubscription>();
 
-			_toggle?.onValueChanged.RemoveListener(OnToggleChanged);
-			_toggle = null;
+			if (_field)
+				_field.OnValueChanged.RemoveListener(OnToggleChanged);
+
+			_field = null;
 		}
 
 		public void Dispose() { }

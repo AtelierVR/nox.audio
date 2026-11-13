@@ -5,7 +5,6 @@ using Nox.CCK.Settings;
 using Nox.CCK.Utils;
 using Nox.UI;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Nox.Audio.Runtime {
 	/// <summary>
@@ -13,7 +12,7 @@ namespace Nox.Audio.Runtime {
 	/// Uses the volume.prefab which contains both a range slider and a toggle.
 	/// </summary>
 	public sealed class VolumeSetting : RangeHandler, IAudioSetting {
-		private Toggle _toggle;
+		private ToggleField _field;
 		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
 		public override string[] Path
@@ -39,11 +38,13 @@ namespace Nox.Audio.Runtime {
 		public override GameObject GetContent(RectTransform transform, IMenu menu) {
 			var go = base.GetContent(transform, menu);
 
-			// Set up mute toggle from the combined prefab
-			_toggle = Reference.GetComponent<Toggle>("toggle", go);
-			_toggle.onValueChanged.AddListener(OnToggleChanged);
+			_field = go.GetOrAddComponent<ToggleField>();
 
-			// The device may be muted (or silenced by its volume) from any UI or by the mute key.
+			_field.prefab = Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");
+			_field.keepLabel = false;
+			_field.Build();
+			_field.OnValueChanged.AddListener(OnToggleChanged);
+
 			_events = new[] {
 				Main.CoreAPI.EventAPI.Subscribe("audio.microphone.mute_changed", OnMicrophoneChanged),
 				Main.CoreAPI.EventAPI.Subscribe("audio.microphone.volume_changed", OnMicrophoneChanged)
@@ -64,7 +65,7 @@ namespace Nox.Audio.Runtime {
 
 		/// <summary>Re-reads the device state into the row (silent: the toggle is not a user input).</summary>
 		private void Refresh() {
-			_toggle?.SetIsOnWithoutNotify(Main.MicrophoneManager.Current.IsMuted);
+			_field?.SetValue(Main.MicrophoneManager.Current.IsMuted);
 			UpdateMuteType();
 		}
 
@@ -96,8 +97,8 @@ namespace Nox.Audio.Runtime {
 				Main.CoreAPI?.EventAPI.Unsubscribe(subscription);
 			_events = Array.Empty<EventSubscription>();
 
-			_toggle?.onValueChanged.RemoveListener(OnToggleChanged);
-			_toggle = null;
+			_field?.OnValueChanged.RemoveListener(OnToggleChanged);
+			_field = null;
 		}
 	}
 }
