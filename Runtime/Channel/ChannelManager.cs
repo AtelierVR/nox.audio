@@ -24,14 +24,14 @@ namespace Nox.Audio.Runtime.Channels {
 
 			if (Channels.TryGetValue(id, out var e)) {
 				var existing = e.Item1;
-				
+
 				if (depends.Length <= 0)
 					return existing;
 
 				var merged = existing.Depends
 					.Union(depends)
 					.ToArray();
-				
+
 				if (merged.Length <= existing.Depends.Length)
 					return existing;
 
