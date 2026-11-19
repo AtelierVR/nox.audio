@@ -1,25 +1,28 @@
 using System;
-using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace Nox.Audio.Runtime.Channels {
 	internal static class SystemAudio {
-		private const double PollInterval = 1.0;
+		private const double POLL_INTERVAL = 1.0;
 
 		private static bool _hasValue;
-		private static bool _silent;
+		private static MuteFlags _flags;
 		private static double _nextPoll;
 
-		public static bool IsSilent {
+		public static readonly UnityEvent<MuteFlags> OnMuteChanged = new();
+
+		public static MuteFlags Flags {
 			get {
 				if (!_hasValue)
 					Refresh();
-				return _silent;
+				return _flags;
 			}
 		}
+
+		public static bool IsSilent
+			=> Flags != MuteFlags.None;
 
 		public static bool Update() {
 			var now = Time.realtimeSinceStartupAsDouble;
@@ -33,30 +36,37 @@ namespace Nox.Audio.Runtime.Channels {
 			=> Read(Time.realtimeSinceStartupAsDouble);
 
 		private static bool Read(double now) {
-			_nextPoll = now + PollInterval;
+			_nextPoll = now + POLL_INTERVAL;
 
 			var value = Probe();
-			var changed = _hasValue && value != _silent;
+			var changed = _hasValue && value != _flags;
 
 			_hasValue = true;
-			_silent = value;
+			_flags = value;
+
+			if (changed)
+				OnMuteChanged.Invoke(value);
 
 			return changed;
 		}
 
-		private static bool Probe() {
+		private static MuteFlags Probe() {
+			var flags = MuteFlags.None;
+
 #if UNITY_EDITOR
 			if (UnityEditor.EditorUtility.audioMasterMute)
-				return true;
+				flags |= MuteFlags.Unity;
 #endif
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-			return Windows.IsSilent;
+			if (Windows.IsSilent)
+				flags |= MuteFlags.System;
 #elif UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
-			return Linux.IsSilent;
-#else
-			return false;
+			if (Linux.IsSilent)
+				flags |= MuteFlags.System;
 #endif
+
+			return flags;
 		}
 
 		public static void Shutdown() {
@@ -64,7 +74,7 @@ namespace Nox.Audio.Runtime.Channels {
 			Windows.Release();
 #endif
 			_hasValue = false;
-			_silent = false;
+			_flags = MuteFlags.None;
 			_nextPoll = 0;
 		}
 

@@ -39,6 +39,12 @@ MonoBehaviour:
       value: "Channels"
     - key: settings.entry.audio.channel.general
       value: "General"
+    - key: settings.entry.audio.channel.system_mute
+      value: "Audio muted"
+    - key: settings.entry.audio.channel.system_mute.unity
+      value: "Audio muted by Unity"
+    - key: settings.entry.audio.channel.system_mute.system
+      value: "Audio muted by the system"
   - IETF: fr-FR
     entries:
     - key: audio.microphone.default
@@ -63,5 +69,11 @@ MonoBehaviour:
       value: "Canaux"
     - key: settings.entry.audio.channel.general
       value: "Général"
+    - key: settings.entry.audio.channel.system_mute
+      value: "Audio coupé"
+    - key: settings.entry.audio.channel.system_mute.unity
+      value: "Audio coupé par Unity"
+    - key: settings.entry.audio.channel.system_mute.system
+      value: "Audio coupé par le système"
     - key: mute.active
       value: "Muet"

@@ -57,6 +57,7 @@ namespace Nox.Audio.Runtime {
 
 			// Microphone settings
 			Settings = new IAudioSetting[] {
+				new SystemMuteSetting(),
 				new CurrentSetting(),
 				new VolumeSetting(),
 				new ActivationSetting(),
