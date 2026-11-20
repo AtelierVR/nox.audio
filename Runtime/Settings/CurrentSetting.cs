@@ -10,7 +10,7 @@ namespace Nox.Audio.Runtime {
 			=> new[] { "audio", "microphone", "current" };
 
 		public override int Order
-			=> 40001;
+			=> 40000;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/dropdown.prefab");
@@ -34,9 +34,9 @@ namespace Nox.Audio.Runtime {
 			var defaultMic = Main.MicrophoneManager.Default;
 			options.Add("default", new[] { "audio.microphone.default", defaultMic.Name });
 
-			foreach (var t in devices) 
+			foreach (var t in devices)
 				options.Add(t.Name, new[] { "value", t.Name });
-			
+
 			return options;
 		}
 

@@ -10,7 +10,7 @@ namespace Nox.Audio.Runtime {
 			=> new[] { "audio", "microphone", "activation" };
 
 		public override int Order
-			=> 40001;
+			=> 40003;
 
 		public ActivationSetting() {
 			SetRange(0f, 1f);

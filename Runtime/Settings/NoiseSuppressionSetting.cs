@@ -14,7 +14,7 @@ namespace Nox.Audio.Runtime {
 			=> new[] { "audio", "microphone", "noise_suppression" };
 
 		public override int Order
-			=> 40001;
+			=> 40004;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/toggle.prefab");

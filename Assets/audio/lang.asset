@@ -35,6 +35,22 @@ MonoBehaviour:
       value: "Muted"
     - key: settings.entry.audio.microphone.noise_suppression.label
       value: "Noise Suppression"
+    - key: settings.group.audio.voice.label
+      value: "Voice"
+    - key: settings.entry.audio.microphone.change_session.label
+      value: "On Change Session"
+    - key: settings.entry.audio.microphone.change_session.option.none
+      value: "No change"
+    - key: settings.entry.audio.microphone.change_session.option.muted
+      value: "Mute"
+    - key: settings.entry.audio.microphone.change_session.option.whisper
+      value: "Whisper"
+    - key: settings.entry.audio.microphone.change_session.option.normal
+      value: "Normal"
+    - key: settings.entry.audio.microphone.change_session.option.loud
+      value: "Loud"
+    - key: settings.entry.audio.microphone.change_session.option.broadcast
+      value: "Broadcast"
     - key: settings.group.audio.channel.label
       value: "Channels"
     - key: settings.entry.audio.channel.general
@@ -65,8 +81,22 @@ MonoBehaviour:
       value: "Muet"
     - key: settings.entry.audio.microphone.noise_suppression.label
       value: "Suppression du bruit"
-    - key: settings.group.audio.channel.label
-      value: "Canaux"
+    - key: settings.group.audio.voice.label
+      value: "Voix"
+    - key: settings.entry.audio.microphone.change_session.label
+      value: "Au changement de session"
+    - key: settings.entry.audio.microphone.change_session.option.none
+      value: "Ne pas changer"
+    - key: settings.entry.audio.microphone.change_session.option.muted
+      value: "Muet"
+    - key: settings.entry.audio.microphone.change_session.option.whisper
+      value: "Chuchotement"
+    - key: settings.entry.audio.microphone.change_session.option.normal
+      value: "Normal"
+    - key: settings.entry.audio.microphone.change_session.option.loud
+      value: "Fort"
+    - key: settings.entry.audio.microphone.change_session.option.broadcast
+      value: "Diffusion"
     - key: settings.entry.audio.channel.general
       value: "Général"
     - key: settings.entry.audio.channel.system_mute

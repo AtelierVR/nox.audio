@@ -61,7 +61,8 @@ namespace Nox.Audio.Runtime {
 				new CurrentSetting(),
 				new VolumeSetting(),
 				new ActivationSetting(),
-				new NoiseSuppressionSetting()
+				new NoiseSuppressionSetting(),
+				new ChangeSessionSetting()
 			};
 
 			foreach (var setting in Settings)

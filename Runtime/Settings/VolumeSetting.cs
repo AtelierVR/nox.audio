@@ -19,7 +19,7 @@ namespace Nox.Audio.Runtime {
 			=> new[] { "audio", "microphone", "volume" };
 
 		public override int Order
-			=> 40001;
+			=> 40002;
 
 		override protected GameObject GetPrefab()
 			=> Main.CoreAPI.AssetAPI.GetAsset<GameObject>("settings:prefabs/volume.prefab");
