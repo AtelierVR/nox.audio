@@ -6,6 +6,12 @@ namespace Nox.Audio.Players {
 	/// </summary>
 	public interface ILocalPlayerVoice : IPlayerVoice {
 		/// <summary>
+		/// Mode announced while the microphone is live; a silent device announces
+		/// <see cref="SpeakMode.Muted"/> instead, so this is the mode to restore on unmute.
+		/// </summary>
+		SpeakMode DesiredSpeak { get; }
+
+		/// <summary>
 		/// Get or set the live <see cref="ICapturedAudio"/> for this local player.
 		/// <para>
 		/// The relay local player assigns a <see cref="MicrophoneAudio"/> built from
