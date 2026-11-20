@@ -47,6 +47,9 @@
     "main": [
       "Nox.Audio.Runtime.Main"
     ],
+    "client": [
+      "Nox.Audio.Runtime.Client"
+    ],
     "editor": [
       "Nox.Audio.Runtime.Editor",
       "Nox.Audio.Runtime.MicrophonePanel"
