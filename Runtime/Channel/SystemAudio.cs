@@ -1,7 +1,11 @@
 using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Events;
+using Process = System.Diagnostics.Process;
+using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
 
 namespace Nox.Audio.Runtime.Channels {
 	internal static class SystemAudio {
